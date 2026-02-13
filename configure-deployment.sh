@@ -16,7 +16,7 @@ echo -e "${BLUE}==========================================${NC}"
 # Configuration - UPDATE THESE WITH YOUR ACTUAL VALUES
 RESOURCE_GROUP="sams-rg-f4296e92"
 APP_NAME="sams-backend-f4296e92"  # Your actual App Service name
-MYSQL_SERVER="sams-mysql-server-f4296e92"  # Your actual MySQL server name
+MYSQL_SERVER="sams-mysql-f4296e92"  # Updated server name
 MYSQL_DB="sams_db"
 MYSQL_ADMIN="samsadmin"  # Your MySQL admin username
 MYSQL_PASSWORD="SecurePass123!"  # Your actual MySQL password

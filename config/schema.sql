@@ -599,5 +599,98 @@ END //
 DELIMITER ;
 
 -- =====================================================
+-- SAMPLE DATA FOR TESTING
+-- =====================================================
+
+-- Insert Admin User
+INSERT INTO users (full_name, email, password_hash, role, phone, is_active) VALUES
+('System Administrator', 'admin@sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', '+91-9876543210', TRUE);
+
+-- Insert Departments
+INSERT INTO departments (name, code, description, is_active) VALUES
+('Computer Science', 'CSE', 'Department of Computer Science and Engineering', TRUE),
+('Information Technology', 'IT', 'Department of Information Technology', TRUE),
+('Electronics', 'ECE', 'Department of Electronics and Communication', TRUE),
+('Mechanical Engineering', 'ME', 'Department of Mechanical Engineering', TRUE);
+
+-- Insert Subjects
+INSERT INTO subjects (name, code, department_id, credits, semester, description, is_active) VALUES
+('Data Structures', 'CSE101', 1, 4, 3, 'Introduction to Data Structures and Algorithms', TRUE),
+('Database Management', 'CSE201', 1, 3, 4, 'Database Design and Management Systems', TRUE),
+('Web Development', 'IT101', 2, 3, 3, 'Modern Web Development Technologies', TRUE),
+('Computer Networks', 'CSE301', 1, 3, 5, 'Computer Networks and Communication', TRUE),
+('Software Engineering', 'CSE401', 1, 3, 6, 'Software Development Life Cycle', TRUE),
+('Digital Electronics', 'ECE101', 3, 3, 3, 'Digital Logic and Circuit Design', TRUE),
+('Thermodynamics', 'ME101', 4, 3, 3, 'Engineering Thermodynamics', TRUE);
+
+-- Insert Teacher Users
+INSERT INTO users (full_name, email, password_hash, role, phone, is_active) VALUES
+('Dr. Rajesh Kumar', 'rajesh.kumar@sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'teacher', '+91-9876543211', TRUE),
+('Prof. Priya Sharma', 'priya.sharma@sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'teacher', '+91-9876543212', TRUE),
+('Dr. Amit Singh', 'amit.singh@sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'teacher', '+91-9876543213', TRUE);
+
+-- Insert Teachers
+INSERT INTO teachers (user_id, employee_id, primary_department_id, designation, qualification, joining_date) VALUES
+(2, 'T001', 1, 'Associate Professor', 'PhD Computer Science', '2020-01-15'),
+(3, 'T002', 1, 'Assistant Professor', 'MTech Computer Science', '2021-07-01'),
+(4, 'T003', 2, 'Professor', 'PhD Information Technology', '2019-03-20');
+
+-- Insert Student Users
+INSERT INTO users (full_name, email, password_hash, role, phone, is_active) VALUES
+('Amit Kumar', 'amit.kumar@student.sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', '+91-9876543221', TRUE),
+('Priya Patel', 'priya.patel@student.sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', '+91-9876543222', TRUE),
+('Rahul Sharma', 'rahul.sharma@student.sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', '+91-9876543223', TRUE),
+('Sneha Gupta', 'sneha.gupta@student.sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', '+91-9876543224', TRUE),
+('Vikram Singh', 'vikram.singh@student.sams.edu', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', '+91-9876543225', TRUE);
+
+-- Insert Students
+INSERT INTO students (user_id, roll_number, department_id, semester, section, batch_year, admission_date, face_registered) VALUES
+(5, 'CSE2024001', 1, 4, 'A', 2024, '2024-07-01', TRUE),
+(6, 'CSE2024002', 1, 4, 'A', 2024, '2024-07-01', TRUE),
+(7, 'IT2024001', 2, 4, 'B', 2024, '2024-07-01', FALSE),
+(8, 'ECE2024001', 3, 4, 'A', 2024, '2024-07-01', TRUE),
+(9, 'ME2024001', 4, 4, 'A', 2024, '2024-07-01', FALSE);
+
+-- Insert Teacher Assignments
+INSERT INTO teacher_assignments (teacher_id, subject_id, department_id, academic_year, semester, is_active) VALUES
+(1, 1, 1, '2024-2025', 4, TRUE), -- Rajesh Kumar teaches Data Structures
+(1, 2, 1, '2024-2025', 4, TRUE), -- Rajesh Kumar teaches Database Management
+(2, 3, 2, '2024-2025', 4, TRUE), -- Priya Sharma teaches Web Development
+(3, 4, 1, '2024-2025', 6, TRUE); -- Amit Singh teaches Computer Networks
+
+-- Insert Schedules
+INSERT INTO schedules (subject_id, teacher_id, day_of_week, start_time, end_time, room_number, academic_year, semester, is_active) VALUES
+(1, 1, 'Monday', '09:00:00', '10:30:00', 'CS-101', '2024-2025', 4, TRUE),
+(1, 1, 'Wednesday', '09:00:00', '10:30:00', 'CS-101', '2024-2025', 4, TRUE),
+(2, 1, 'Tuesday', '11:00:00', '12:30:00', 'CS-102', '2024-2025', 4, TRUE),
+(2, 1, 'Thursday', '11:00:00', '12:30:00', 'CS-102', '2024-2025', 4, TRUE),
+(3, 2, 'Monday', '14:00:00', '15:30:00', 'IT-201', '2024-2025', 4, TRUE),
+(3, 2, 'Friday', '14:00:00', '15:30:00', 'IT-201', '2024-2025', 4, TRUE);
+
+-- Insert Sample Attendance Records
+INSERT INTO attendance (student_id, schedule_id, attendance_date, status, marked_by, location_lat, location_lng, device_info, ip_address) VALUES
+(1, 1, '2024-02-05', 'present', 1, 28.6139, 77.2090, 'Mobile App', '192.168.1.100'),
+(1, 2, '2024-02-07', 'present', 1, 28.6139, 77.2090, 'Mobile App', '192.168.1.100'),
+(2, 1, '2024-02-05', 'present', 1, 28.6139, 77.2090, 'Mobile App', '192.168.1.101'),
+(2, 2, '2024-02-07', 'late', 1, 28.6139, 77.2090, 'Mobile App', '192.168.1.101'),
+(4, 1, '2024-02-05', 'absent', 1, NULL, NULL, 'Web Portal', '192.168.1.102');
+
+-- Insert System Settings
+INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_system) VALUES
+('app_name', 'SAMS - Student Attendance Management System', 'string', 'Application name', TRUE),
+('app_version', '2.0.0', 'string', 'Current application version', TRUE),
+('attendance_threshold', '100', 'number', 'Attendance percentage threshold for alerts', FALSE),
+('face_recognition_enabled', 'true', 'boolean', 'Enable face recognition for attendance', FALSE),
+('location_tracking_enabled', 'true', 'boolean', 'Enable location tracking for attendance', FALSE),
+('max_login_attempts', '5', 'number', 'Maximum login attempts before lockout', TRUE),
+('session_timeout', '3600', 'number', 'Session timeout in seconds', TRUE);
+
+-- Insert Sample Notifications
+INSERT INTO notifications (user_id, title, message, type, is_read, created_at) VALUES
+(5, 'Welcome to SAMS', 'Welcome to the Student Attendance Management System. Please register your face for attendance.', 'info', FALSE, NOW()),
+(6, 'Attendance Marked', 'Your attendance has been marked for Data Structures class on 2024-02-05.', 'success', TRUE, '2024-02-05 10:00:00'),
+(7, 'Face Registration Required', 'Please register your face to mark attendance automatically.', 'warning', FALSE, NOW());
+
+-- =====================================================
 -- END OF SCHEMA
 -- =====================================================

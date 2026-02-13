@@ -4,6 +4,12 @@
 .env.production
 .env.staging
 
+# Android/Kotlin code - exclude from backend deployment
+android-kotlin/
+sams-android-app/
+*.apk
+*.aar
+
 # Logs
 logs/
 *.log
