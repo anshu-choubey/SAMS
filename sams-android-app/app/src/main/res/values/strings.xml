@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SAMS</string>
+    <string name="app_full_name">Student Attendance Management System</string>
+    
+    <!-- Login Screen -->
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="email_hint">Enter your email</string>
+    <string name="password_hint">Enter your password</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="login_welcome">Welcome Back!</string>
+    <string name="login_subtitle">Sign in to continue</string>
+    
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="save">Save</string>
+    <string name="back">Back</string>
+    <string name="done">Done</string>
+    <string name="continue_text">Continue</string>
+    <string name="close">Close</string>
+    <string name="logout">Logout</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard">Dashboard</string>
+    <string name="todays_schedule">Today\'s Schedule</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="attendance_overview">Attendance Overview</string>
+    <string name="no_classes_today">No Classes Today</string>
+    
+    <!-- Schedule -->
+    <string name="schedule">Schedule</string>
+    <string name="my_schedule">My Schedule</string>
+    <string name="full_schedule">Full Schedule</string>
+    
+    <!-- Attendance -->
+    <string name="attendance">Attendance</string>
+    <string name="attendance_history">Attendance History</string>
+    <string name="mark_attendance">Mark Attendance</string>
+    <string name="present">Present</string>
+    <string name="absent">Absent</string>
+    <string name="total">Total</string>
+    <string name="classes_attended">Classes Attended</string>
+    
+    <!-- Profile -->
+    <string name="profile">Profile</string>
+    <string name="personal_information">Personal Information</string>
+    <string name="full_name">Full Name</string>
+    <string name="roll_number">Roll Number</string>
+    <string name="department">Department</string>
+    <string name="semester">Semester</string>
+    <string name="section">Section</string>
+    
+    <!-- Face Registration -->
+    <string name="face_registration">Face Registration</string>
+    <string name="register_face">Register Face</string>
+    <string name="face_already_registered">Face already registered</string>
+    <string name="face_not_registered">Face not registered</string>
+    <string name="capture_face">Capture Face</string>
+    <string name="retake">Retake</string>
+    
+    <!-- Teacher -->
+    <string name="start_class">Start Class</string>
+    <string name="end_class">End Class</string>
+    <string name="class_attendance">Class Attendance</string>
+    <string name="active_session">Active Session</string>
+    <string name="my_subjects">My Subjects</string>
+    <string name="total_students">Total Students</string>
+    <string name="class_started">Class Started</string>
+    <string name="class_ended">Class Ended</string>
+    
+    <!-- Location -->
+    <string name="location_verification">Location Verification</string>
+    <string name="getting_location">Getting your location…</string>
+    <string name="location_verified">Location Verified</string>
+    <string name="location_permission_required">Location permission is required</string>
+    
+    <!-- Notifications -->
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">No Notifications</string>
+    <string name="mark_all_read">Mark all read</string>
+    
+    <!-- Status -->
+    <string name="ongoing">Ongoing</string>
+    <string name="completed">Completed</string>
+    <string name="pending">Pending</string>
+    <string name="live">Live</string>
+    <string name="ready">Ready</string>
+    
+    <!-- Errors -->
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+    <string name="error_invalid_credentials">Invalid email or password</string>
+    <string name="error_location">Unable to get location</string>
+    <string name="error_face_detection">Face not detected. Please try again.</string>
+    
+    <!-- Notification Channels -->
+    <string name="channel_general">General Notifications</string>
+    <string name="channel_general_desc">General app notifications</string>
+    <string name="channel_attendance">Attendance Updates</string>
+    <string name="channel_attendance_desc">Notifications about attendance marking</string>
+    <string name="channel_class">Class Updates</string>
+    <string name="channel_class_desc">Notifications about class sessions</string>
+    <string name="channel_alerts">Alerts</string>
+    <string name="channel_alerts_desc">Important alerts and warnings</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SAMS" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/primary_blue</item>
+        <item name="android:navigationBarColor">@color/background_light</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:colorPrimary">@color/primary_blue</item>
+        <item name="android:colorAccent">@color/accent_purple</item>
+    </style>
+    
+    <style name="Theme.SAMS.Splash" parent="Theme.SAMS">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+    </style>
+</resources>
