@@ -1,5 +1,5 @@
 <?php
-require_once '../config/database.php';
+require_once 'config/database.php';
 
 try {
     $database = new Database();
@@ -9,7 +9,7 @@ try {
         echo "Database connection successful!\n";
 
         // Read and execute schema-postgres.sql
-        $schema = file_get_contents('../config/schema-postgres.sql');
+        $schema = file_get_contents('config/schema-postgres.sql');
         $statements = array_filter(array_map('trim', explode(';', $schema)));
 
         foreach ($statements as $statement) {
