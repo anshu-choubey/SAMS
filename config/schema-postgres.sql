@@ -49,11 +49,11 @@ CREATE TABLE departments (
     name VARCHAR(100) NOT NULL,
     code VARCHAR(10) UNIQUE NOT NULL,
     description TEXT,
-    head_id INT,
+    hod_id INT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (head_id) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (hod_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- 3. Subjects Table
