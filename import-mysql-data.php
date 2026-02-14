@@ -80,6 +80,7 @@ try {
         // Convert empty strings to null for phone, and ensure boolean for is_active
         $user[5] = $user[5] === '' ? null : $user[5]; // phone
         $user[7] = $user[7] === '' ? false : (bool)$user[7]; // is_active
+        echo "Processing user ID {$user[0]}, is_active: " . var_export($user[7], true) . "\n";
         try {
             $stmt->execute($user);
         } catch (Exception $e) {
