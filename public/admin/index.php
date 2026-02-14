@@ -30,7 +30,7 @@ if ($db) {
         $stmt = $db->query("SELECT COUNT(*) as count FROM users WHERE role='teacher'");
         $totalTeachers = $stmt->fetch()['count'] ?? 0;
         
-        $stmt = $db->query("SELECT COUNT(*) as count FROM departments WHERE is_active = 1");
+        $stmt = $db->query("SELECT COUNT(*) as count FROM departments WHERE is_active = true");
         $totalDepartments = $stmt->fetch()['count'] ?? 0;
         
         // Today's attendance breakdown
@@ -61,7 +61,7 @@ if ($db) {
             FROM departments d
             LEFT JOIN users u ON u.department_id = d.id AND u.role = 'student'
             LEFT JOIN attendance a ON a.student_id = u.id AND a.attendance_date = CURDATE()
-            WHERE d.is_active = 1
+            WHERE d.is_active = true
             GROUP BY d.id
             ORDER BY d.name");
         $departmentStats = $stmt->fetchAll(PDO::FETCH_ASSOC);

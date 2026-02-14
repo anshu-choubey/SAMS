@@ -30,7 +30,7 @@ if ($db) {
                             ORDER BY u.created_at DESC");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $depts = $db->query("SELECT id, name FROM departments WHERE is_active = 1 ORDER BY name");
+        $depts = $db->query("SELECT id, name FROM departments WHERE is_active = true ORDER BY name");
         $departments = $depts->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         error_log($e->getMessage());

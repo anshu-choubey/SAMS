@@ -22,7 +22,7 @@ if ($db) {
                            ORDER BY s.name");
         $subjects = $stmt->fetchAll();
         
-        $depts = $db->query("SELECT id, name FROM departments WHERE is_active = 1 ORDER BY name");
+        $depts = $db->query("SELECT id, name FROM departments WHERE is_active = true ORDER BY name");
         $departments = $depts->fetchAll();
     } catch (Exception $e) {
         error_log($e->getMessage());

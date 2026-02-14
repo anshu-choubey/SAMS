@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     try {
-        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND is_active = true");
         $stmt->execute([$email]);
         $user = $stmt->fetch();
         
