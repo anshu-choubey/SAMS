@@ -3,7 +3,7 @@
  * Migration: Add semester and is_active columns to subjects table
  */
 
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/config/database.php';
 
 try {
     $database = new Database();
