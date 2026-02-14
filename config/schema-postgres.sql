@@ -153,7 +153,7 @@ CREATE TABLE attendance (
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
     FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
-    UNIQUE(student_id, schedule_id, DATE(marked_at))
+    UNIQUE(student_id, schedule_id)
 );
 
 -- 10. FCM Tokens Table
