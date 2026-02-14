@@ -77,6 +77,9 @@ try {
 
     $stmt = $db->prepare("INSERT INTO users (id, full_name, email, password_hash, role, phone, profile_image, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     foreach ($users as $user) {
+        // Convert empty strings to null for phone, and ensure boolean for is_active
+        $user[5] = $user[5] === '' ? null : $user[5]; // phone
+        $user[7] = $user[7] === '' ? false : (bool)$user[7]; // is_active
         try {
             $stmt->execute($user);
         } catch (Exception $e) {
@@ -84,7 +87,7 @@ try {
         }
     }
 
-    // Import students
+    // Import students (with data conversion)
     echo "Importing students...\n";
     $students = [
         [1, 4, '234323', 1, 2, 'A', 2353, '2026-02-11', false, null],
