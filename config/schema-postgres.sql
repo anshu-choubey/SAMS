@@ -198,6 +198,7 @@ CREATE TABLE sessions (
     ip_address VARCHAR(45),
     user_agent TEXT,
     expires_at TIMESTAMP NOT NULL,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
