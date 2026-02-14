@@ -38,15 +38,19 @@ echo "Database URL: $DATABASE_URL"
 heroku config:set APP_ENV=production --app $APP_NAME
 
 echo "📊 Initializing database..."
-# Extract database credentials from DATABASE_URL
-# DATABASE_URL format: mysql://user:pass@host/db?reconnect=true
-DB_HOST=$(echo $DATABASE_URL | sed 's/mysql:\/\/.*@\(.*\)\/.*$/\1/')
-DB_USER=$(echo $DATABASE_URL | sed 's/mysql:\/\/\(.*\):.*@.*$/\1/')
-DB_PASS=$(echo $DATABASE_URL | sed 's/mysql:\/\/.*:\(.*\)@.*$/\1/')
-DB_NAME=$(echo $DATABASE_URL | sed 's/mysql:\/\/.*@.*\/\(.*\)?reconnect=true$/\1/')
+# Get the ClearDB connection URL
+DATABASE_URL=$(heroku config:get DATABASE_URL --app $APP_NAME)
+echo "Database URL: $DATABASE_URL"
+
+# Parse DATABASE_URL: mysql://user:pass@host/db?reconnect=true
+DB_USER=$(echo $DATABASE_URL | cut -d: -f2 | cut -d/ -f3)
+DB_PASS=$(echo $DATABASE_URL | cut -d: -f3 | cut -d@ -f1)
+DB_HOST=$(echo $DATABASE_URL | cut -d@ -f2 | cut -d/ -f1)
+DB_NAME=$(echo $DATABASE_URL | cut -d/ -f4 | cut -d? -f1)
 
 echo "Database Host: $DB_HOST"
 echo "Database Name: $DB_NAME"
+echo "Database User: $DB_USER"
 
 # Initialize database schema
 echo "Creating database schema..."
