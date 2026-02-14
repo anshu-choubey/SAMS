@@ -5,12 +5,34 @@
  */
 
 class Database {
-    private $host = 'localhost';
-    private $db_name = 'sams_db';
-    private $username = 'root';
-    private $password = '';
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $charset = 'utf8mb4';
     private $conn;
+
+    public function __construct() {
+        // Check for DATABASE_URL (Heroku style)
+        $databaseUrl = getenv('DATABASE_URL');
+        if ($databaseUrl) {
+            $this->parseDatabaseUrl($databaseUrl);
+        } else {
+            // Local defaults
+            $this->host = getenv('MYSQL_HOST') ?: 'localhost';
+            $this->db_name = getenv('MYSQL_DATABASE') ?: 'sams_db';
+            $this->username = getenv('MYSQL_USER') ?: 'root';
+            $this->password = getenv('MYSQL_PASSWORD') ?: '';
+        }
+    }
+
+    private function parseDatabaseUrl($url) {
+        $parsed = parse_url($url);
+        $this->host = $parsed['host'];
+        $this->db_name = ltrim($parsed['path'], '/');
+        $this->username = $parsed['user'];
+        $this->password = $parsed['pass'];
+    }
 
     /**
      * Get database connection

@@ -15,16 +15,16 @@ echo -e "${BLUE}=============================================${NC}"
 
 # Configuration
 RESOURCE_GROUP="sams-rg-f4296e92"
-LOCATION="westeurope"  # Changed to West Europe for Azure for Students compatibility
+LOCATION="eastus"  # East US region for Azure for Students
 APP_NAME="sams-backend-f4296e92"
-MYSQL_SERVER="sams-mysql-server-f4296e92"
+MYSQL_SERVER="sams-mysql-f4296e92"
 MYSQL_DB="sams_db"
 PLAN_NAME="sams-plan-f4296e92"
 MYSQL_PASSWORD="SecurePass123!"  # Change this!
 
 echo -e "${YELLOW}Configuration:${NC}"
 echo "  Resource Group: $RESOURCE_GROUP"
-echo "  Location: $LOCATION (West Europe)"
+echo "  Location: $LOCATION (East US)"
 echo "  App Name: $APP_NAME"
 echo "  MySQL Server: $MYSQL_SERVER"
 echo "  Database: $MYSQL_DB"
@@ -90,7 +90,7 @@ az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan $PLAN_NAME \
   --name $APP_NAME \
-  --runtime "PHP|8.1"
+  --runtime "PHP|8.2"
 check_error "Failed to create Web App"
 echo -e "${GREEN}✅ Web App created${NC}"
 

@@ -9,7 +9,7 @@ define('UPLOAD_PATH', BASE_PATH . '/uploads/');
 define('LOG_PATH', BASE_PATH . '/logs/');
 
 // URL Configuration
-define('BASE_URL', 'http://localhost/sams-backend/');
+define('BASE_URL', getenv('BASE_URL') ?: 'http://localhost/sams-backend/');
 define('API_URL', BASE_URL . 'api/');
 
 // Security
