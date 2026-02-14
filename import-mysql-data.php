@@ -11,7 +11,8 @@ try {
 
     echo "Starting data import from MySQL dump to PostgreSQL...\n\n";
 
-    $db->beginTransaction();
+    // Don't use transaction to allow partial success
+    // $db->beginTransaction();
 
     // Clear existing data (except departments which we'll update)
     echo "Clearing existing data...\n";
@@ -111,13 +112,13 @@ try {
         }
     }
 
-    $db->commit();
+    // $db->commit();
     echo "\nData import completed successfully!\n";
 
 } catch (Exception $e) {
-    if (isset($db)) {
-        $db->rollBack();
-    }
+    // if (isset($db)) {
+    //     $db->rollBack();
+    // }
     echo "Import failed: " . $e->getMessage() . "\n";
 }
 ?>
