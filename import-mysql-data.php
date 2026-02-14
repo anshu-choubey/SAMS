@@ -81,7 +81,7 @@ try {
         // Convert empty strings to null for phone, and ensure boolean for is_active
         $user[5] = $user[5] === '' ? null : $user[5]; // phone
         $user[7] = $user[7] === '' ? false : (bool)$user[7]; // is_active
-        echo "Processing user ID {$user[0]}, is_active: " . var_export($user[7], true) . "\n";
+        echo "Processing user ID {$user[0]}, is_active: " . var_export($user[7], true) . ", raw: " . $user[7] . "\n";
         try {
             $stmt->execute($user);
         } catch (Exception $e) {
@@ -103,7 +103,7 @@ try {
         [9, 24, '43553443', 1, 1, 'v', 2026, '2026-02-13', true, '8h+k+gOkkCikWYj4MfptAVRnREtUNEhvbVhPRStKZVVUU3JvM0x3dml1LzRSUlBqb1pZVW5hdXFRWGJrSkZPOXNoejRTU1pvUmJqSUYzelQzMW1sbmF0QXRwZkcrRWcrQ0JVdnN3bFRhSHhpRjhrOEpaVVg1R1o4KzFoUXljL0VVQ0hxZUJkWktoYytnK1RQeUFZWjFkWVMwOWhkZDMyVW1qS1QrWHJESUUvTW1YWGhPakhLeUthamszeEsvS29zRW4yb0MwWEdKK3p0ODBkaEp4Y0FWSVdXL1A0d2kwWEZ6RTFGQmlLTHZ0MVVwdlFQZlNmckpqbzJiRHZ4ei84cnJIRDdWeVhiRzhXV0NBakU3WTNxbXhKRDIzVk5ibUpCQXBaT2dqb3pVVUpoWmFzdnRQWjdvSDAwSTVQMExkeWs2Qll3b05BdW5FcnlPa2tTWUNBMFhTVWdhVU1kYngxMFlKWUFEUDR0R2dibHMwKzk1Q2c2UDF3K1cvTDgrQWQ5YWZ1aldKNEFlUE5LaE5DaG1JUURsdmVaaGt1aEhlZGs4S21oYWRFRVVNd2RObnhBeXF0enZVaUxUTi92MGp0UUxXUlNXbk94Q0VkM1gvY1RYRWp0ZGdRNkk3V1R0OGJVZlFXSjdGWkYvWHZ1Z2NEZ0xNell2bzRXODFWelMwVDRzMUQyb0x6UEwzUlVsQ3l3NFJrMkR3S2tlcWJXVkJhRkd4Y3h1SThJbU11dXFFYTRlbFFKZEVyK0JsVy84QzRMT1hRbEo1L2RBb1A5bGM1aTZWM05YU1VQN3huM0FhZXpGSklBc0dXbC95Y2gzK3dMb2xGVGcvc0hIYUJEbmJDMys2TVpBdUZ0cWhXbFYvS2ZRbHhXdW9GMThyUEFmYTdRekVnOVBucGY3dTVjajJUV25TdmJRZk9KamtzOVNML00zc01oaUlYb2Mzc3dqSTg4d2VwSjJGZXRwMWs3YTBzU0NUbEdxbzd2ditFbExvcUdpcmptWGh3UUIvNUlBOE1JMzJuRE1UQnI4WUExUXNOUXVQSDM0QnFWVS9qeWVFME1Wc2FHOUhUMXVDVDRwbk1zUUpZKzBSUHBwMjd3NDVtOUpvSUV1SkVRM0xVbnNwK3RDdmovSnkrdEpvN1hnY3c2RE11OHhwYTR0NHhnU056YTlJR1V5NG5sUWdiblpXREZCSEZ5QWlZRVpsTCtFMk1nUFh1TDZKZ0lwTGY5Kzh5ZVliRWhiV1ZBZ2lTbTRRSkpjWXNUbkxuQ1N4ZmdMa2FmZ1d0VWJSWFlOdVc4d1J5SnUyT3VkaWczL25qekoxdFNKVWUwL05YYnZXS2RWekkxUC9BT2hSdndaR3FYU2dFTzVXWUlEelBwVS9pL0pVY2J6UjZVQWcyRkl2ZitmZ0pLMWFQNTJYNGI2SW9NU1JMRzZLOEVhUWxTdEFOMmNHRDE2d0M3cUVBdUhLa3hUYU1oWjhLQW02WFYrck1ObFNvajN4WEJ2MGg5OVZLV1BadXBweURmTHVIN0YxTjcxMWxoMXYrSUJack1Nb2NJVkEwalRPMm1EUndUTWU5QmZFazcrZExSNnZBbUZ5eHV3U2ZBMExidUxUWTM5UWlkYURrRzhNUGhnRmVOTUZLYkZyR1ExazByOXAvK3M5UGJNR0JLcWVOZFBJeFZOOTBIbTd0V0V5TndYc1pMdWlGekhyc3c3aXd2UjNlRTUwQW02ZVBsTXpBNVJmSDlyMSs0QUJuQ2diM3hlR2pTVXJ1amtnUXI5Vk9yUHl0UENwbTBDaEtHekxSc1drVDFvTmxkd3QyTGpHalFFK0tOcEhyZW13bkJXQmtWMlF6Z0M4ZzE2dzQyY0JiSmdyTStQYnkxcmM4U21jbWZDVkdyV2N5ekZmdjUyQlVENGhBUTlWQmZhWWg0UlZDV1lNSlN2TjhBVEtrWTNWVS9zYjFYcCt3UnpGSUdvR0dEdFhseUVyeUlTWUdvRkZyRmo1VGxrMWJSQVR5V0ZwRnU2QVArVVBFZGlLTjNHbm8rN0hnYjRDcWNwMWozVjkzYUJWSWdZaVhyYjlXTVp3ZWxsVUh6dW9OeU1FaGxGSS9CNk9SeWNJOTJsNWZGS3FSc0xBTWtIdmc1TkYvRnV6RCs1RlNVa1BKb09pL1llZFFDN0ZPcE1Va0V2NUFqQlU3d2xBPT0=']
     ];
 
-    $stmt = $db->prepare("INSERT INTO students (id, user_id, roll_number, department_id, semester, section, batch_year, admission_date, face_registered, face_data, face_registration_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)");
+    $stmt = $db->prepare("INSERT INTO students (id, user_id, roll_no, department_id, year, section, batch_year, admission_date, face_registered, face_data, face_registration_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)");
     foreach ($students as $student) {
         try {
             $stmt->execute($student);
