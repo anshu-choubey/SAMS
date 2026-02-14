@@ -10,6 +10,7 @@ class Database {
     private $username;
     private $password;
     private $charset = 'utf8mb4';
+    private $db_type = 'mysql'; // default to mysql
     private $conn;
 
     public function __construct() {
@@ -32,6 +33,7 @@ class Database {
         $this->db_name = ltrim($parsed['path'], '/');
         $this->username = $parsed['user'];
         $this->password = $parsed['pass'];
+        $this->db_type = $parsed['scheme']; // 'mysql' or 'postgres'
     }
 
     /**
@@ -42,7 +44,11 @@ class Database {
         $this->conn = null;
 
         try {
-            $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset={$this->charset}";
+            if ($this->db_type === 'postgres' || $this->db_type === 'postgresql') {
+                $dsn = "pgsql:host={$this->host};dbname={$this->db_name}";
+            } else {
+                $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset={$this->charset}";
+            }
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
