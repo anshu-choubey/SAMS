@@ -17,13 +17,13 @@ $days = [];
 
 if ($db) {
     try {
-        $stmt = $db->query("SELECT s.*, ta.section, u.full_name, sub.name as subject_name
+        $stmt = $db->query("SELECT s.*, ta.class_name, u.full_name, sub.name as subject_name
                            FROM schedules s
-                           LEFT JOIN teacher_assignments ta ON s.assignment_id = ta.id
+                           LEFT JOIN teacher_assignments ta ON s.teacher_assignment_id = ta.id
                            LEFT JOIN teachers t ON ta.teacher_id = t.id
                            LEFT JOIN users u ON t.user_id = u.id
                            LEFT JOIN subjects sub ON ta.subject_id = sub.id
-                           ORDER BY FIELD(s.day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'), s.start_time");
+                           ORDER BY s.day_of_week, s.start_time");
         $schedules = $stmt->fetchAll();
         
         // Get teachers for dropdown

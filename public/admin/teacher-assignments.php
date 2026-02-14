@@ -19,12 +19,11 @@ $subjects = [];
 if ($db) {
     try {
         // Get assignments
-        $stmt = $db->query("SELECT ta.*, u.full_name, sub.name as subject_name, d.name as dept_name 
+        $stmt = $db->query("SELECT ta.*, u.full_name, sub.name as subject_name
                            FROM teacher_assignments ta
                            LEFT JOIN teachers t ON ta.teacher_id = t.id
                            LEFT JOIN users u ON t.user_id = u.id
                            LEFT JOIN subjects sub ON ta.subject_id = sub.id
-                           LEFT JOIN departments d ON ta.department_id = d.id
                            ORDER BY u.full_name");
         $assignments = $stmt->fetchAll();
         
