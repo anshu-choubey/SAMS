@@ -13,8 +13,8 @@ class Database {
     private $conn;
 
     public function __construct() {
-        // Check for DATABASE_URL (Heroku style)
-        $databaseUrl = getenv('DATABASE_URL');
+        // Check for JAWSDB_URL (JawsDB on Heroku) or DATABASE_URL (Heroku style)
+        $databaseUrl = getenv('JAWSDB_URL') ?: getenv('DATABASE_URL');
         if ($databaseUrl) {
             $this->parseDatabaseUrl($databaseUrl);
         } else {
