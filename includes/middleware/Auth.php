@@ -98,7 +98,7 @@ class Auth {
         $database = new Database();
         $db = $database->getConnection();
 
-        $query = "SELECT id, full_name, email, role 
+        $query = "SELECT id, full_name, email, role, phone, profile_image 
                   FROM users WHERE id = :id AND is_active = TRUE";
         
         $stmt = $db->prepare($query);
