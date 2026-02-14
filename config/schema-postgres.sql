@@ -64,6 +64,8 @@ CREATE TABLE subjects (
     description TEXT,
     department_id INT,
     credits INT DEFAULT 3,
+    semester INT,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
