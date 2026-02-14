@@ -9,10 +9,13 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
-    // Check departments
-    $stmt = $db->query("SELECT COUNT(*) as count FROM departments");
-    $departments = $stmt->fetch(PDO::FETCH_ASSOC);
-    echo "Departments count: " . $departments['count'] . "\n";
+    // Check departments details
+    $stmt = $db->query("SELECT id, name, code, is_active FROM departments");
+    $depts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo "Departments:\n";
+    foreach ($depts as $dept) {
+        echo "  - {$dept['name']} ({$dept['code']}) - Active: " . ($dept['is_active'] ? 'Yes' : 'No') . "\n";
+    }
 
     // Check subjects
     $stmt = $db->query("SELECT COUNT(*) as count FROM subjects");
