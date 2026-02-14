@@ -50,6 +50,7 @@ CREATE TABLE departments (
     code VARCHAR(10) UNIQUE NOT NULL,
     description TEXT,
     head_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (head_id) REFERENCES users(id) ON DELETE SET NULL
