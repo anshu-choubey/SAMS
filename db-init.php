@@ -8,8 +8,8 @@ try {
     if ($conn) {
         echo "Database connection successful!\n";
 
-        // Read and execute schema.sql
-        $schema = file_get_contents('../config/schema.sql');
+        // Read and execute schema-postgres.sql
+        $schema = file_get_contents('../config/schema-postgres.sql');
         $statements = array_filter(array_map('trim', explode(';', $schema)));
 
         foreach ($statements as $statement) {
