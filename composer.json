@@ -1,0 +1,8 @@
+{
+    "name": "sams/backend",
+    "description": "SAMS Backend Application",
+    "type": "project",
+    "require": {
+        "php": ">=7.4"
+    }
+}
