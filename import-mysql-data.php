@@ -79,11 +79,11 @@ try {
     $stmt = $db->prepare("INSERT INTO users (id, full_name, email, password_hash, role, phone, profile_image, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     foreach ($users as $user) {
         // Convert empty strings to null for phone, and ensure boolean for is_active
-        $user[5] = $user[5] === '' ? null : $user[5]; // phone
-        $user[7] = $user[7] === '' ? false : (bool)$user[7]; // is_active
-        echo "Processing user ID {$user[0]}, is_active: " . var_export($user[7], true) . ", raw: " . $user[7] . "\n";
+        $phone = $user[5] === '' ? null : $user[5];
+        $isActive = $user[7] === '' ? false : (bool)$user[7];
+        echo "Processing user ID {$user[0]}, is_active: " . var_export($isActive, true) . ", raw: '{$user[7]}'\n";
         try {
-            $stmt->execute($user);
+            $stmt->execute([$user[0], $user[1], $user[2], $user[3], $user[4], $phone, $user[6], $isActive]);
         } catch (Exception $e) {
             echo "Skipping user ID {$user[0]}: " . $e->getMessage() . "\n";
         }
