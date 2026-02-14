@@ -20,7 +20,11 @@ CREATE TABLE departments (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(20) NOT NULL UNIQUE,
-    is_active BOOLEAN DEFAULT TRUE
+    description TEXT,
+    hod_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE subjects (
@@ -28,7 +32,12 @@ CREATE TABLE subjects (
     name VARCHAR(100) NOT NULL,
     code VARCHAR(20) NOT NULL UNIQUE,
     department_id INT,
-    is_active BOOLEAN DEFAULT TRUE
+    credits INT DEFAULT 3,
+    semester INT,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE teachers (
@@ -42,8 +51,10 @@ CREATE TABLE teacher_assignments (
     id SERIAL PRIMARY KEY,
     teacher_id INT NOT NULL,
     subject_id INT NOT NULL,
+    class_name VARCHAR(50),
+    semester INT,
     academic_year VARCHAR(20),
-    semester INT
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE schedules (
@@ -52,5 +63,11 @@ CREATE TABLE schedules (
     day_of_week INT,
     start_time TIME,
     end_time TIME,
-    room VARCHAR(50)
+    room VARCHAR(50),
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
+    qr_code TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
