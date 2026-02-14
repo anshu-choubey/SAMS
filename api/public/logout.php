@@ -62,7 +62,7 @@ try {
 
     // Delete session from database
     if ($sessionId && $db) {
-        $query = "DELETE FROM sessions WHERE session_id = :session_id";
+        $query = "DELETE FROM sessions WHERE session_token = :session_id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':session_id', $sessionId);
         $stmt->execute();

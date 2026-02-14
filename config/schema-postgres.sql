@@ -226,7 +226,7 @@ CREATE TABLE audit_logs (
 
 -- Insert default admin user
 INSERT INTO users (full_name, email, password_hash, role, is_active) VALUES
-('System Administrator', 'admin@sams.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', true);
+('System Administrator', 'admin@sams.com', '$2y$12$EfE9yo8DnNgdDAIohaOmUu.kGE8ghPFtfsyjpYmwJBjfF9bLUSb96', 'admin', true);
 
 -- Insert default system settings
 INSERT INTO system_settings (setting_key, setting_value, description) VALUES
