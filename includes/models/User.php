@@ -13,8 +13,6 @@ class User {
     public $email;
     public $password_hash;
     public $role;
-    public $phone;
-    public $profile_image;
     public $is_active;
 
     public function __construct($db) {
@@ -26,8 +24,8 @@ class User {
      */
     public function create() {
         $query = "INSERT INTO " . $this->table . " 
-                  (full_name, email, password_hash, role, phone, is_active) 
-                  VALUES (:full_name, :email, :password_hash, :role, :phone, :is_active)";
+                  (full_name, email, password_hash, role, is_active) 
+                  VALUES (:full_name, :email, :password_hash, :role, :is_active)";
 
         $stmt = $this->conn->prepare($query);
 
@@ -39,7 +37,6 @@ class User {
         $stmt->bindParam(':email', $this->email);
         $stmt->bindParam(':password_hash', $hashed_password);
         $stmt->bindParam(':role', $this->role);
-        $stmt->bindParam(':phone', $this->phone);
         $stmt->bindParam(':is_active', $this->is_active);
 
         if ($stmt->execute()) {
@@ -54,8 +51,7 @@ class User {
      * Get all users with filters
      */
     public function getAll($filters = []) {
-        $query = "SELECT u.id, u.full_name, u.email, u.role, u.phone, 
-                         u.profile_image, u.is_active, u.created_at,
+        $query = "SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.created_at,
                          CASE 
                             WHEN u.role = 'student' THEN s.roll_number
                             WHEN u.role = 'teacher' THEN t.employee_id
@@ -150,7 +146,6 @@ class User {
         $query = "UPDATE " . $this->table . " 
                   SET full_name = :full_name, 
                       email = :email, 
-                      phone = :phone, 
                       is_active = :is_active
                   WHERE id = :id";
 
@@ -158,7 +153,6 @@ class User {
 
         $stmt->bindParam(':full_name', $this->full_name);
         $stmt->bindParam(':email', $this->email);
-        $stmt->bindParam(':phone', $this->phone);
         $stmt->bindParam(':is_active', $this->is_active);
         $stmt->bindParam(':id', $this->id);
 
