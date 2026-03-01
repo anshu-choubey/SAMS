@@ -53,6 +53,13 @@ echo -e "${YELLOW}🚀 Creating Heroku App: ${APP_NAME}${NC}"
 heroku create $APP_NAME --region $HEROKU_REGION
 echo -e "${GREEN}✓ Heroku app created${NC}\n"
 
+# Remove conflicting git remote if it exists
+git remote remove heroku 2>/dev/null || true
+
+# Add git remote for this specific app
+git remote add heroku https://git.heroku.com/${APP_NAME}.git
+echo -e "${GREEN}✓ Git remote added${NC}\n"
+
 # Add MySQL database
 echo -e "${YELLOW}📦 Attaching MySQL Database...${NC}"
 heroku addons:create $DATABASE_ADDON --app $APP_NAME
