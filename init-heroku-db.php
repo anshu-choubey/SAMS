@@ -72,11 +72,29 @@ try {
     
     echo "Executing schema statements...\n";
     
-    // Split and execute statements
+    // Split statements properly
+    $raw_statements = explode(';', $schema);
+    echo "Total statements found: " . count($raw_statements) . "\n";
+    
+    // Filter and clean statements
     $statements = array_filter(
-        array_map('trim', explode(';', $schema)),
-        fn($s) => !empty($s) && !preg_match('/^--/', $s)
+        array_map(function($s) {
+            // Remove comments and whitespace
+            $lines = explode("\n", $s);
+            $clean_lines = [];
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                // Skip empty lines and SQL comments
+                if (!empty($trimmed) && !preg_match('/^--/', $trimmed)) {
+                    $clean_lines[] = $trimmed;
+                }
+            }
+            return implode("\n", $clean_lines);
+        }, $raw_statements),
+        fn($s) => !empty(trim($s))
     );
+    
+    echo "Valid statements: " . count($statements) . "\n";
     
     $count = 0;
     $errors = 0;
