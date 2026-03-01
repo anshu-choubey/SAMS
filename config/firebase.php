@@ -3,26 +3,48 @@
  * Firebase Cloud Messaging Configuration
  */
 
+// Define FCM Server Key Constant
+function getFCMServerKey() {
+    try {
+        if (!class_exists('Database')) {
+            require_once __DIR__ . '/database.php';
+        }
+        $database = new Database();
+        $db = $database->getConnection();
+
+        if ($db) {
+            $query = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
+            $stmt = $db->query($query);
+            if ($stmt && $stmt->rowCount() > 0) {
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $result['setting_value'] ?? '';
+            }
+        }
+    } catch (Exception $e) {
+        error_log("FCM Key Error: " . $e->getMessage());
+    }
+    return '';
+}
+
+if (!defined('FCM_SERVER_KEY')) {
+    define('FCM_SERVER_KEY', getFCMServerKey());
+}
+
+if (!defined('FCM_URL')) {
+    define('FCM_URL', 'https://fcm.googleapis.com/fcm/send');
+}
+
 class FirebaseConfig {
     private $serverKey;
     private $fcmUrl = 'https://fcm.googleapis.com/fcm/send';
 
     public function __construct() {
-        // Load server key from system settings or environment
-        $this->serverKey = $this->getServerKey();
+        // Load server key from constant or database
+        $this->serverKey = FCM_SERVER_KEY ?: $this->getServerKey();
     }
 
     private function getServerKey() {
-        require_once BASE_PATH . '/config/database.php';
-        $database = new Database();
-        $db = $database->getConnection();
-
-        $query = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key'";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $result = $stmt->fetch();
-
-        return $result['setting_value'] ?? '';
+        return FCM_SERVER_KEY ?: '';
     }
 
     public function sendNotification($tokens, $title, $message, $data = []) {

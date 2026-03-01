@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
         
         // Create session record in database
-        $sessionStmt = $db->prepare("INSERT INTO sessions (user_id, session_token, ip_address, user_agent, expires_at) 
+        $sessionStmt = $db->prepare("INSERT INTO sessions (user_id, session_id, ip_address, user_agent, expires_at) 
                                      VALUES (?, ?, ?, ?, ?)");
         $sessionStmt->execute([$user['id'], $sessionId, $ipAddress, $userAgent, $expiresAt]);
         
@@ -84,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'email' => $user['email'],
                     'full_name' => $user['full_name'],
                     'role' => $user['role']
-                ]
+                ],
+                'session_id' => $sessionId
             ]
         ]);
         exit;

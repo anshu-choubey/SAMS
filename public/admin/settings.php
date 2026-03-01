@@ -256,6 +256,7 @@ $pageTitle = 'Settings';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             loadQuickStats();
@@ -272,7 +273,6 @@ $pageTitle = 'Settings';
             }
 
             try {
-                showLoading();
                 const response = await fetch('/api/admin/settings.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -280,16 +280,14 @@ $pageTitle = 'Settings';
                 });
 
                 const result = await response.json();
-                hideLoading();
 
                 if (result.success) {
-                    showAlert('success', 'Settings saved successfully');
+                    showSuccessDialog('Success!', 'Settings saved successfully.');
                 } else {
-                    showAlert('error', result.message);
+                    showErrorDialog('Error!', result.message || 'Failed to save settings');
                 }
             } catch (error) {
-                hideLoading();
-                showAlert('error', 'Failed to save settings');
+                showErrorDialog('Error!', 'Failed to save settings');
             }
         }
 
@@ -319,76 +317,68 @@ $pageTitle = 'Settings';
         }
 
         function clearSessions() {
-            if (!confirm('This will logout all users except you. Continue?')) return;
-            
-            showLoading();
-            // Clear all PHP sessions by making API call
-            fetch('/api/admin/settings.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'clear_sessions' })
-            })
-            .then(response => response.json())
-            .then(result => {
-                hideLoading();
-                if (result.success) {
-                    showAlert('success', 'All user sessions cleared successfully');
-                } else {
-                    showAlert('error', result.message || 'Failed to clear sessions');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                // Fallback: clear local storage and show success
-                localStorage.clear();
-                sessionStorage.clear();
-                showAlert('success', 'Local sessions cleared');
+            showConfirmDialog('Clear All Sessions?', 'This will logout all users except you. Continue?', function() {
+                // Clear all PHP sessions by making API call
+                fetch('/api/admin/settings.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'clear_sessions' })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showSuccessDialog('Success!', 'All user sessions cleared successfully.');
+                    } else {
+                        showErrorDialog('Error!', result.message || 'Failed to clear sessions');
+                    }
+                })
+                .catch(error => {
+                    // Fallback: clear local storage and show success
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    showSuccessDialog('Success!', 'Local sessions cleared.');
+                });
             });
         }
 
         function clearCache() {
-            if (!confirm('Clear all cached data?')) return;
-            
-            showLoading();
-            // Clear browser caches
-            if ('caches' in window) {
-                caches.keys().then(names => {
-                    names.forEach(name => caches.delete(name));
-                });
-            }
-            localStorage.clear();
-            
-            // Simulate server cache clear
-            setTimeout(() => {
-                hideLoading();
-                showAlert('success', 'Cache cleared successfully');
-            }, 1000);
+            showConfirmDialog('Clear All Cached Data?', 'This will clear all browser caches. Continue?', function() {
+                // Clear browser caches
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+                localStorage.clear();
+                
+                // Simulate server cache clear
+                setTimeout(() => {
+                    showSuccessDialog('Success!', 'Cache cleared successfully.');
+                }, 1000);
+            });
         }
 
         function backupDatabase() {
-            if (!confirm('Download database backup? This may take a moment.')) return;
-            
-            showLoading();
-            // Create backup request
-            fetch('/api/admin/settings.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'backup_database' })
-            })
-            .then(response => response.json())
-            .then(result => {
-                hideLoading();
-                if (result.success && result.download_url) {
-                    window.location.href = result.download_url;
-                    showAlert('success', 'Database backup created');
-                } else {
-                    // Fallback message
-                    showAlert('info', 'Backup request submitted. Contact system admin for download.');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                showAlert('info', 'Backup feature requires server configuration');
+            showConfirmDialog('Download Database Backup?', 'This may take a moment. Continue?', function() {
+                // Create backup request
+                fetch('/api/admin/settings.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'backup_database' })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.download_url) {
+                        showSuccessDialog('Success!', 'Database backup created. Downloading...');
+                        window.location.href = result.download_url;
+                    } else {
+                        // Fallback message
+                        showInfoDialog('Info', 'Backup request submitted. Contact system admin for download.');
+                    }
+                })
+                .catch(error => {
+                    showInfoDialog('Info', 'Backup feature requires server configuration');
+                });
             });
         }
     </script>

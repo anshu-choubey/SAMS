@@ -183,8 +183,8 @@ if (isset($_SESSION['user_id'])) {
                     <p style="margin: 0 0 10px 0; font-weight: 600; color: #667eea;"><i class="bi bi-info-circle"></i> Admin Login</p>
                     <div>
                         <strong>Admin:</strong><br>
-                        Email: admin@sams.com<br>
-                        Password: admin@123
+                        Email: admin@sams.edu<br>
+                        Password: Admin@123
                     </div>
                 </div>
             </div>

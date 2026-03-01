@@ -279,6 +279,7 @@ $pageTitle = 'Reports';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script>
         // Set default dates
         document.addEventListener('DOMContentLoaded', function() {
@@ -301,7 +302,7 @@ $pageTitle = 'Reports';
             const data = Object.fromEntries(formData.entries());
             
             if (!data.date_from || !data.date_to) {
-                showAlert('error', 'Please select date range');
+                showWarningDialog('Missing Data', 'Please select date range');
                 return;
             }
             
@@ -319,12 +320,13 @@ $pageTitle = 'Reports';
                 if (result.success) {
                     const stats = result.data;
                     displayAttendanceReport(stats, data.date_from, data.date_to);
+                    showSuccessDialog('Success!', 'Attendance report generated successfully.');
                     addReportToList('Attendance Report', `${data.date_from} to ${data.date_to}`, 'HTML', stats);
                 } else {
-                    showAlert('error', 'Error: ' + result.message);
+                    showErrorDialog('Error!', result.message || 'Failed to generate report');
                 }
             } catch (error) {
-                showAlert('error', 'Error generating report: ' + error.message);
+                showErrorDialog('Error!', 'Error generating report: ' + error.message);
             }
         }
 
@@ -390,7 +392,7 @@ $pageTitle = 'Reports';
             const data = Object.fromEntries(formData.entries());
             
             if (!data.department_id || !data.semester || !data.report_type) {
-                showAlert('error', 'Please fill all required fields');
+                showWarningDialog('Missing Data', 'Please fill all required fields');
                 return;
             }
             
@@ -405,11 +407,12 @@ $pageTitle = 'Reports';
                 
                 if (result.success && result.data.report) {
                     displayStudentReport(result.data.report, data);
+                    showSuccessDialog('Success!', 'Student report generated successfully.');
                 } else {
-                    showAlert('error', 'No data found or error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', 'No data found or error: ' + (result.message || 'Unknown error'));
                 }
             } catch (error) {
-                showAlert('error', 'Error generating report: ' + error.message);
+                showErrorDialog('Error!', 'Error generating report: ' + error.message);
             }
         }
 
@@ -472,7 +475,7 @@ $pageTitle = 'Reports';
             const data = Object.fromEntries(formData.entries());
             
             if (!data.report_type || !data.academic_year) {
-                showAlert('error', 'Please fill all required fields');
+                showWarningDialog('Missing Data', 'Please fill all required fields');
                 return;
             }
             
@@ -489,11 +492,12 @@ $pageTitle = 'Reports';
                 
                 if (result.success && result.data.assignments) {
                     displayTeacherReport(result.data.assignments, data);
+                    showSuccessDialog('Success!', 'Teacher report generated successfully.');
                 } else {
-                    showAlert('error', 'No data found');
+                    showErrorDialog('Error!', 'No data found');
                 }
             } catch (error) {
-                showAlert('error', 'Error generating report: ' + error.message);
+                showErrorDialog('Error!', 'Error generating report: ' + error.message);
             }
         }
 
@@ -555,7 +559,7 @@ $pageTitle = 'Reports';
             const data = Object.fromEntries(formData.entries());
             
             if (!data.report_type || !data.date_from || !data.date_to) {
-                showAlert('error', 'Please fill all required fields');
+                showWarningDialog('Missing Data', 'Please fill all required fields');
                 return;
             }
             
@@ -581,8 +585,9 @@ $pageTitle = 'Reports';
                     dateTo: data.date_to,
                     reportType: data.report_type
                 });
+                showSuccessDialog('Success!', 'System report generated successfully.');
             } catch (error) {
-                showAlert('error', 'Error generating report: ' + error.message);
+                showErrorDialog('Error!', 'Error generating report: ' + error.message);
             }
         }
 

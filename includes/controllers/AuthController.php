@@ -58,7 +58,7 @@ class AuthController {
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
-        $query = "INSERT INTO sessions (user_id, session_token, ip_address, user_agent, expires_at) 
+        $query = "INSERT INTO sessions (user_id, session_id, ip_address, user_agent, expires_at) 
                   VALUES (:user_id, :session_id, :ip_address, :user_agent, :expires_at)";
 
         $stmt = $this->db->prepare($query);
@@ -143,7 +143,7 @@ class AuthController {
 
         if (isset($_SESSION['session_id'])) {
             // Delete session from database
-            $query = "DELETE FROM sessions WHERE session_token = :session_id";
+            $query = "DELETE FROM sessions WHERE session_id = :session_id";
             $stmt = $this->db->prepare($query);
             $stmt->bindParam(':session_id', $_SESSION['session_id']);
             $stmt->execute();

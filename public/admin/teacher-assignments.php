@@ -18,29 +18,46 @@ $subjects = [];
 
 if ($db) {
     try {
-        // Get assignments
-        $stmt = $db->query("SELECT ta.*, u.full_name, sub.name as subject_name, d.name as dept_name
-                           FROM teacher_assignments ta
-                           LEFT JOIN teachers t ON ta.teacher_id = t.id
-                           LEFT JOIN users u ON t.user_id = u.id
-                           LEFT JOIN subjects sub ON ta.subject_id = sub.id
-                           LEFT JOIN departments d ON ta.department_id = d.id
-                           ORDER BY u.full_name");
-        $assignments = $stmt->fetchAll();
+        // Check if tables exist
+        $stmt = $db->query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'departments')");
+        $deptExists = $stmt->fetchColumn();
         
-        // Get teachers for dropdown
-        $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t LEFT JOIN users u ON t.user_id = u.id ORDER BY u.full_name");
-        $teachers = $stmt->fetchAll();
-        
-        // Get departments for dropdown
-        $stmt = $db->query("SELECT id, name FROM departments ORDER BY name");
-        $departments = $stmt->fetchAll();
-        
-        // Get subjects for dropdown
-        $stmt = $db->query("SELECT id, name, department_id FROM subjects ORDER BY name");
-        $subjects = $stmt->fetchAll();
+        if ($deptExists) {
+            // Get assignments
+            $stmt = $db->query("SELECT ta.*, u.full_name, sub.name as subject_name, d.name as dept_name
+                               FROM teacher_assignments ta
+                               LEFT JOIN teachers t ON ta.teacher_id = t.id
+                               LEFT JOIN users u ON t.user_id = u.id
+                               LEFT JOIN subjects sub ON ta.subject_id = sub.id
+                               LEFT JOIN departments d ON ta.department_id = d.id
+                               ORDER BY u.full_name");
+            $assignments = $stmt->fetchAll();
+            
+            // Get teachers for dropdown
+            $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t LEFT JOIN users u ON t.user_id = u.id ORDER BY u.full_name");
+            $teachers = $stmt->fetchAll();
+            
+            // Get departments for dropdown
+            $stmt = $db->query("SELECT id, name FROM departments ORDER BY name");
+            $departments = $stmt->fetchAll();
+            
+            // Get subjects for dropdown
+            $stmt = $db->query("SELECT id, name, department_id FROM subjects ORDER BY name");
+            $subjects = $stmt->fetchAll();
+        } else {
+            // Database not set up yet
+            $assignments = [];
+            $teachers = [];
+            $departments = [];
+            $subjects = [];
+        }
     } catch (Exception $e) {
         error_log($e->getMessage());
+        // Database error - show empty data
+        $assignments = [];
+        $teachers = [];
+        $departments = [];
+        $subjects = [];
     }
 }
 
@@ -64,9 +81,17 @@ $pageTitle = 'Assignments';
 
         <!-- Page Content -->
         <div class="content-wrapper">
+            <?php if (empty($departments)): ?>
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle"></i> 
+                <strong>Database Setup Required:</strong> The departments table is empty. Please run the database setup scripts to populate the required data.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <?php endif; ?>
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="bi bi-person-badge"></i> Teacher Assignments</h2>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssignmentModal">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssignmentModal" <?php echo empty($departments) ? 'disabled' : ''; ?>>
                     <i class="bi bi-plus-circle"></i> Add Assignment
                 </button>
             </div>
@@ -295,6 +320,7 @@ $pageTitle = 'Assignments';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script>
         // Pagination & Filter Variables
         let currentPage = 1;
@@ -419,20 +445,23 @@ $pageTitle = 'Assignments';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'Assignment created successfully');
+                    showSuccessDialog('Success!', 'Assignment created successfully.', () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('addAssignmentModal')).hide();
                     form.reset();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', result.message || 'Unknown error');
                 }
             } catch (error) {
-                showAlert('error', 'Error: ' + error.message);
+                showErrorDialog('Error!', error.message);
             }
         }
 
         function deleteAssignment(id) {
-            if (confirm('Are you sure you want to delete this assignment?')) {
+            const row = event.target.closest('tr');
+            const teacherName = row.cells[0].textContent.trim();
+            const subjectName = row.cells[1].textContent.trim();
+            
+            showConfirmDialog('Delete Assignment?', `Remove assignment for "${teacherName}" to "${subjectName}"?`, function() {
                 fetch('/api/admin/teacher-assignments.php', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -441,13 +470,12 @@ $pageTitle = 'Assignments';
                 }).then(response => response.json())
                   .then(result => {
                       if (result.success) {
-                          showAlert('success', 'Assignment deleted successfully');
-                          location.reload();
+                          showSuccessDialog('Deleted!', `Assignment deleted successfully.`, () => location.reload());
                       } else {
-                          showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                          showErrorDialog('Error!', result.message || 'Unknown error');
                       }
                   });
-            }
+            });
         }
 
         async function editAssignment(id) {
@@ -470,16 +498,17 @@ $pageTitle = 'Assignments';
 
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('editAssignmentModal')).show();
                 } else {
-                    showAlert('error', 'Failed to load assignment');
+                    showErrorDialog('Error!', 'Failed to load assignment');
                 }
             } catch (error) {
-                showAlert('error', 'Error: ' + error.message);
+                showErrorDialog('Error!', error.message);
             }
         }
 
         async function updateAssignment() {
             const form = document.getElementById('editAssignmentForm');
             const formData = new FormData(form);
+            const teacherName = document.getElementById('editTeacherName').value;
             const data = Object.fromEntries(formData.entries());
 
             try {
@@ -493,14 +522,13 @@ $pageTitle = 'Assignments';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'Assignment updated successfully');
+                    showSuccessDialog('Updated!', 'Assignment updated successfully.', () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('editAssignmentModal')).hide();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', result.message || 'Unknown error');
                 }
             } catch (error) {
-                showAlert('error', 'Error: ' + error.message);
+                showErrorDialog('Error!', error.message);
             }
         }
     </script>

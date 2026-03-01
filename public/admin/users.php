@@ -177,100 +177,116 @@ $pageTitle = 'Users';
                 </div>
                 <div class="modal-body">
                     <form id="addUserForm">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name *</label>
-                                <input type="text" class="form-control" name="full_name" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email *</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" name="phone">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Role *</label>
-                                <select class="form-select" name="role" id="userRole" required onchange="toggleRoleFields()">
-                                    <option value="">Select Role</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="teacher">Teacher</option>
-                                    <option value="student">Student</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Password *</label>
-                                <input type="password" class="form-control" name="password" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="is_active">
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
-                                </select>
+                        <!-- General User Information -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-person"></i> User Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" name="full_name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email *</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Password *</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                </div>
                             </div>
                         </div>
-                        <!-- Student-only fields -->
-                        <div id="studentFields" class="row g-3 mt-2" style="display: none;">
-                            <div class="col-md-6">
-                                <label class="form-label">Roll Number *</label>
-                                <input type="text" class="form-control" name="roll_number" placeholder="e.g., CS001">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Department *</label>
-                                <select class="form-select" name="department_id">
-                                    <option value="">Select Department</option>
-                                    <?php foreach($departments as $dept): ?>
-                                    <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Semester *</label>
-                                <select class="form-select" name="semester">
-                                    <option value="">Select Semester</option>
-                                    <?php for($i=1; $i<=8; $i++): ?>
-                                    <option value="<?php echo $i; ?>">Semester <?php echo $i; ?></option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Section</label>
-                                <input type="text" class="form-control" name="section" placeholder="e.g., A, B, C">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Batch Year</label>
-                                <input type="number" class="form-control" name="batch_year" placeholder="e.g., 2024" min="2020">
+
+                        <!-- Role Selection -->
+                        <div class="mb-4 p-3 bg-light rounded">
+                            <label class="form-label fw-bold mb-3"><i class="bi bi-briefcase"></i> User Role *</label>
+                            <select class="form-select form-select-lg" name="role" id="userRole" required onchange="toggleRoleFields()">
+                                <option value="">Select User Role</option>
+                                <option value="admin">🛡️ Admin</option>
+                                <option value="teacher">👨‍🏫 Teacher</option>
+                                <option value="student">👨‍🎓 Student</option>
+                            </select>
+                        </div>
+
+                        <!-- Student-specific Fields -->
+                        <div id="studentFields" class="card card-body bg-info bg-opacity-10 border-info mb-3" style="display: none;">
+                            <h6 class="text-info mb-3"><i class="bi bi-backpack2"></i> Student Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Roll Number *</label>
+                                    <input type="text" class="form-control" name="roll_number" placeholder="e.g., CS001">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Department *</label>
+                                    <select class="form-select" name="department_id">
+                                        <option value="">Select Department</option>
+                                        <?php foreach($departments as $dept): ?>
+                                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Semester *</label>
+                                    <select class="form-select" name="semester">
+                                        <option value="">Select Semester</option>
+                                        <?php for($i=1; $i<=8; $i++): ?>
+                                        <option value="<?php echo $i; ?>">Semester <?php echo $i; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Section</label>
+                                    <input type="text" class="form-control" name="section" placeholder="e.g., A, B, C">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Batch Year</label>
+                                    <input type="number" class="form-control" name="batch_year" placeholder="e.g., 2024" min="2020">
+                                </div>
                             </div>
                         </div>
-                        <!-- Teacher-only fields -->
-                        <div id="teacherFields" class="row g-3 mt-2" style="display: none;">
-                            <div class="col-md-6">
-                                <label class="form-label">Employee ID *</label>
-                                <input type="text" class="form-control" name="employee_id" placeholder="e.g., EMP001">
+
+                        <!-- Teacher-specific Fields -->
+                        <div id="teacherFields" class="card card-body bg-success bg-opacity-10 border-success mb-3" style="display: none;">
+                            <h6 class="text-success mb-3"><i class="bi bi-mortarboard"></i> Teacher Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Employee ID *</label>
+                                    <input type="text" class="form-control" name="employee_id" placeholder="e.g., EMP001">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Department</label>
+                                    <select class="form-select" name="teacher_department_id">
+                                        <option value="">Select Department</option>
+                                        <?php foreach($departments as $dept): ?>
+                                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" name="designation" placeholder="e.g., Assistant Professor">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Qualification</label>
+                                    <input type="text" class="form-control" name="qualification" placeholder="e.g., PhD Computer Science">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Joining Date</label>
+                                    <input type="date" class="form-control" name="joining_date">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Department</label>
-                                <select class="form-select" name="teacher_department_id">
-                                    <option value="">Select Department</option>
-                                    <?php foreach($departments as $dept): ?>
-                                    <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Designation</label>
-                                <input type="text" class="form-control" name="designation" placeholder="e.g., Assistant Professor">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Qualification</label>
-                                <input type="text" class="form-control" name="qualification" placeholder="e.g., PhD Computer Science">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Joining Date</label>
-                                <input type="date" class="form-control" name="joining_date">
-                            </div>
+                        </div>
+
+                        <!-- Status Field -->
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="is_active">
+                                <option value="1">✓ Active</option>
+                                <option value="0">✗ Inactive</option>
+                            </select>
                         </div>
                     </form>
                 </div>
@@ -295,101 +311,118 @@ $pageTitle = 'Users';
                 <div class="modal-body">
                     <form id="editUserForm">
                         <input type="hidden" name="id" id="editUserId">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Full Name *</label>
-                                <input type="text" class="form-control" name="full_name" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Email *</label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" name="phone">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Role *</label>
-                                <select class="form-select" name="role" id="editUserRole" required onchange="toggleEditRoleFields()">
-                                    <option value="">Select Role</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="teacher">Teacher</option>
-                                    <option value="student">Student</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="is_active">
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-warning w-100" onclick="openPasswordModal()">
-                                    <i class="bi bi-key"></i> Change Password
-                                </button>
+                        
+                        <!-- General User Information -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3"><i class="bi bi-person"></i> User Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" name="full_name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email *</label>
+                                    <input type="email" class="form-control" name="email" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" name="is_active">
+                                        <option value="1">✓ Active</option>
+                                        <option value="0">✗ Inactive</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                        <!-- Student-only fields for edit -->
-                        <div id="editStudentFields" class="row g-3 mt-2" style="display: none;">
-                            <div class="col-md-6">
-                                <label class="form-label">Roll Number *</label>
-                                <input type="text" class="form-control" name="roll_number" placeholder="e.g., CS001">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Department *</label>
-                                <select class="form-select" name="department_id">
-                                    <option value="">Select Department</option>
-                                    <?php foreach($departments as $dept): ?>
-                                    <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Semester *</label>
-                                <select class="form-select" name="semester">
-                                    <option value="">Select Semester</option>
-                                    <?php for($i=1; $i<=8; $i++): ?>
-                                    <option value="<?php echo $i; ?>">Semester <?php echo $i; ?></option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Section</label>
-                                <input type="text" class="form-control" name="section" placeholder="e.g., A, B, C">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Batch Year</label>
-                                <input type="number" class="form-control" name="batch_year" placeholder="e.g., 2024" min="2020">
+
+                        <!-- Role Selection -->
+                        <div class="mb-4 p-3 bg-light rounded">
+                            <label class="form-label fw-bold mb-3"><i class="bi bi-briefcase"></i> User Role *</label>
+                            <select class="form-select form-select-lg" name="role" id="editUserRole" required onchange="toggleEditRoleFields()">
+                                <option value="">Select User Role</option>
+                                <option value="admin">🛡️ Admin</option>
+                                <option value="teacher">👨‍🏫 Teacher</option>
+                                <option value="student">👨‍🎓 Student</option>
+                            </select>
+                        </div>
+
+                        <!-- Student-specific Fields for edit -->
+                        <div id="editStudentFields" class="card card-body bg-info bg-opacity-10 border-info mb-3" style="display: none;">
+                            <h6 class="text-info mb-3"><i class="bi bi-backpack2"></i> Student Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Roll Number *</label>
+                                    <input type="text" class="form-control" name="roll_number" placeholder="e.g., CS001">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Department *</label>
+                                    <select class="form-select" name="department_id">
+                                        <option value="">Select Department</option>
+                                        <?php foreach($departments as $dept): ?>
+                                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Semester *</label>
+                                    <select class="form-select" name="semester">
+                                        <option value="">Select Semester</option>
+                                        <?php for($i=1; $i<=8; $i++): ?>
+                                        <option value="<?php echo $i; ?>">Semester <?php echo $i; ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Section</label>
+                                    <input type="text" class="form-control" name="section" placeholder="e.g., A, B, C">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Batch Year</label>
+                                    <input type="number" class="form-control" name="batch_year" placeholder="e.g., 2024" min="2020">
+                                </div>
                             </div>
                         </div>
-                        <!-- Teacher-only fields for edit -->
-                        <div id="editTeacherFields" class="row g-3 mt-2" style="display: none;">
-                            <div class="col-md-6">
-                                <label class="form-label">Employee ID *</label>
-                                <input type="text" class="form-control" name="employee_id" placeholder="e.g., EMP001">
+
+                        <!-- Teacher-specific Fields for edit -->
+                        <div id="editTeacherFields" class="card card-body bg-success bg-opacity-10 border-success mb-3" style="display: none;">
+                            <h6 class="text-success mb-3"><i class="bi bi-mortarboard"></i> Teacher Information</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Employee ID *</label>
+                                    <input type="text" class="form-control" name="employee_id" placeholder="e.g., EMP001">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Department</label>
+                                    <select class="form-select" name="teacher_department_id">
+                                        <option value="">Select Department</option>
+                                        <?php foreach($departments as $dept): ?>
+                                        <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Designation</label>
+                                    <input type="text" class="form-control" name="designation" placeholder="e.g., Assistant Professor">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Qualification</label>
+                                    <input type="text" class="form-control" name="qualification" placeholder="e.g., PhD Computer Science">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Joining Date</label>
+                                    <input type="date" class="form-control" name="joining_date">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Department</label>
-                                <select class="form-select" name="teacher_department_id">
-                                    <option value="">Select Department</option>
-                                    <?php foreach($departments as $dept): ?>
-                                    <option value="<?php echo $dept['id']; ?>"><?php echo htmlspecialchars($dept['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Designation</label>
-                                <input type="text" class="form-control" name="designation" placeholder="e.g., Assistant Professor">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Qualification</label>
-                                <input type="text" class="form-control" name="qualification" placeholder="e.g., PhD Computer Science">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Joining Date</label>
-                                <input type="date" class="form-control" name="joining_date">
-                            </div>
+                        </div>
+
+                        <!-- Security Options -->
+                        <div class="d-grid">
+                            <button type="button" class="btn btn-outline-warning" onclick="openPasswordModal()">
+                                <i class="bi bi-key"></i> Change Password
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -437,6 +470,7 @@ $pageTitle = 'Users';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script>
         // Toggle role-specific fields in add form
         function toggleRoleFields() {
@@ -512,6 +546,7 @@ $pageTitle = 'Users';
 
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const userName = data.full_name || data.email;
             
             // Map teacher_department_id to department_id for teachers
             if (data.role === 'teacher' && data.teacher_department_id) {
@@ -530,14 +565,13 @@ $pageTitle = 'Users';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'User created successfully!');
+                    showSuccessDialog('Success!', `User "${userName}" created successfully.`, () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', result.message || 'Unknown error');
                 }
             } catch (err) {
-                showAlert('error', 'Error: ' + err.message);
+                showErrorDialog('Error!', err.message);
             }
         }
 
@@ -583,10 +617,10 @@ $pageTitle = 'Users';
                     toggleEditRoleFields();
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('editUserModal')).show();
                 } else {
-                    showAlert('error', 'Failed to load user');
+                    showErrorDialog('Error!', 'Failed to load user');
                 }
             } catch (error) {
-                showAlert('error', 'Failed to load user');
+                showErrorDialog('Error!', 'Failed to load user');
             }
         }
 
@@ -600,6 +634,7 @@ $pageTitle = 'Users';
 
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const userName = data.full_name || data.email;
             
             // Map teacher_department_id to department_id for teachers
             if (data.role === 'teacher' && data.teacher_department_id) {
@@ -618,40 +653,36 @@ $pageTitle = 'Users';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'User updated successfully');
+                    showSuccessDialog('Updated!', `User "${userName}" updated successfully.`, () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to update user'));
+                    showErrorDialog('Error!', result.message || 'Failed to update user');
                 }
             } catch (error) {
-                showAlert('error', 'Failed to update user');
+                showErrorDialog('Error!', 'Failed to update user');
             }
         }
 
         // Delete user
         async function deleteUser(id) {
-            if (!confirm('Are you sure you want to delete this user?')) return;
-
-            try {
-                const response = await fetch('/api/admin/users.php', {
+            const row = event.target.closest('tr');
+            const userName = row.cells[0].textContent.trim();
+            
+            showConfirmDialog('Delete User?', `Remove user "${userName}"?`, function() {
+                fetch('/api/admin/users.php', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id }),
                     credentials: 'include'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('success', 'User deleted successfully');
-                    location.reload();
-                } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to delete user'));
-                }
-            } catch (error) {
-                showAlert('error', 'Failed to delete user');
-            }
+                }).then(response => response.json())
+                  .then(result => {
+                      if (result.success) {
+                          showSuccessDialog('Deleted!', `User deleted successfully.`, () => location.reload());
+                      } else {
+                          showErrorDialog('Error!', result.message || 'Failed to delete user');
+                      }
+                  });
+            });
         }
 
         // Open password modal
@@ -670,12 +701,12 @@ $pageTitle = 'Users';
             const confirmPassword = document.getElementById('confirmPassword').value;
 
             if (newPassword.length < 6) {
-                showAlert('error', 'Password must be at least 6 characters');
+                showWarningDialog('Invalid Password', 'Password must be at least 6 characters');
                 return;
             }
 
             if (newPassword !== confirmPassword) {
-                showAlert('error', 'Passwords do not match');
+                showWarningDialog('Password Mismatch', 'Passwords do not match');
                 return;
             }
 
@@ -690,13 +721,14 @@ $pageTitle = 'Users';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'Password updated successfully');
-                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    showSuccessDialog('Success!', 'Password updated successfully.', () => {
+                        bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    });
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to update password'));
+                    showErrorDialog('Error!', result.message || 'Failed to update password');
                 }
             } catch (error) {
-                showAlert('error', 'Failed to update password');
+                showErrorDialog('Error!', 'Failed to update password');
             }
         }
 

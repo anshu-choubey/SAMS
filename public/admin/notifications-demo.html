@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAMS - Notification System Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .btn-group-vertical {
+            width: 100%;
+        }
+        .btn-group-vertical .btn {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-lg">
+        <div class="row mb-4">
+            <div class="col">
+                <h1><i class="bi bi-bell"></i> SAMS Notification System Demo</h1>
+                <p class="text-muted">Test different types of dialogs and notifications</p>
+            </div>
+        </div>
+
+        <!-- Success Dialogs -->
+        <div class="demo-section">
+            <h3><i class="bi bi-check-circle text-success"></i> Success Dialogs</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-success" onclick="showSuccessDialog('Success!', 'Department has been created successfully.')">
+                    <i class="bi bi-plus"></i> Added Success Dialog
+                </button>
+                <button type="button" class="btn btn-success" onclick="showSuccessDialog('Updated!', 'Department &quot;Computer Science&quot; has been updated successfully.', function() { alert('Callback executed!'); })">
+                    <i class="bi bi-pencil"></i> Update Success Dialog
+                </button>
+                <button type="button" class="btn btn-success" onclick="showSuccessDialog('Deleted!', 'Department has been deleted successfully.', function() { console.log('Department deleted'); })">
+                    <i class="bi bi-trash"></i> Delete Success Dialog
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Dialogs -->
+        <div class="demo-section">
+            <h3><i class="bi bi-x-circle text-danger"></i> Error Dialogs</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-danger" onclick="showErrorDialog('Error!', 'Failed to add department. Please try again.')">
+                    <i class="bi bi-exclamation-triangle"></i> Add Error Dialog
+                </button>
+                <button type="button" class="btn btn-danger" onclick="showErrorDialog('Validation Error', 'Department code already exists. Please use a different code.')">
+                    <i class="bi bi-exclamation-triangle"></i> Validation Error Dialog
+                </button>
+                <button type="button" class="btn btn-danger" onclick="showErrorDialog('Delete Failed', 'Cannot delete this department because it has associated students.')">
+                    <i class="bi bi-exclamation-triangle"></i> Delete Error Dialog
+                </button>
+            </div>
+        </div>
+
+        <!-- Warning Dialogs -->
+        <div class="demo-section">
+            <h3><i class="bi bi-exclamation-circle text-warning"></i> Warning Dialogs</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-warning" onclick="showWarningDialog('Caution', 'You are about to delete this department.')">
+                    <i class="bi bi-exclamation-circle"></i> Warning Dialog
+                </button>
+                <button type="button" class="btn btn-warning" onclick="showWarningDialog('Unsaved Changes', 'You have unsaved changes. Do you want to continue?')">
+                    <i class="bi bi-exclamation-circle"></i> Unsaved Changes Dialog
+                </button>
+            </div>
+        </div>
+
+        <!-- Info Dialogs -->
+        <div class="demo-section">
+            <h3><i class="bi bi-info-circle text-info"></i> Info Dialogs</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-info" onclick="showInfoDialog('Information', '5 departments found matching your search criteria.')">
+                    <i class="bi bi-info-circle"></i> Info Dialog
+                </button>
+                <button type="button" class="btn btn-info" onclick="showInfoDialog('Help', 'To add a new department, click the &quot;Add Department&quot; button in the toolbar.')">
+                    <i class="bi bi-info-circle"></i> Help Dialog
+                </button>
+            </div>
+        </div>
+
+        <!-- Confirm Dialogs -->
+        <div class="demo-section">
+            <h3><i class="bi bi-question-circle text-warning"></i> Confirmation Dialogs</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-primary" onclick="showConfirmDialog('Delete Department?', 'Are you sure you want to delete &quot;Department Name&quot;? This action cannot be undone.', function() { showSuccessDialog('Confirmed!', 'Department deleted.'); }, function() { showToast('info', 'Cancelled', 'Delete operation cancelled.'); })">
+                    <i class="bi bi-trash"></i> Delete Confirm Dialog
+                </button>
+                <button type="button" class="btn btn-primary" onclick="showConfirmDialog('Are you sure?', 'Save changes to this department?', function() { showSuccessDialog('Saved!', 'Changes have been saved.'); })">
+                    <i class="bi bi-save"></i> Save Confirm Dialog
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Dialog -->
+        <div class="demo-section">
+            <h3><i class="bi bi-hourglass-split text-secondary"></i> Loading Dialog</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-secondary" onclick="demoLoadingDialog()">
+                    <i class="bi bi-hourglass-split"></i> Show Loading Dialog (3 seconds)
+                </button>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div class="demo-section">
+            <h3><i class="bi bi-chat-left-dots"></i> Toast Notifications</h3>
+            <br>
+            <div class="btn-group-vertical" role="group">
+                <button type="button" class="btn btn-success" onclick="showToast('success', 'Success!', 'Department added successfully.')">
+                    <i class="bi bi-check"></i> Success Toast
+                </button>
+                <button type="button" class="btn btn-danger" onclick="showToast('danger', 'Error!', 'Failed to add department.')">
+                    <i class="bi bi-x"></i> Error Toast
+                </button>
+                <button type="button" class="btn btn-warning" onclick="showToast('warning', 'Warning!', 'This action is irreversible.')">
+                    <i class="bi bi-exclamation"></i> Warning Toast
+                </button>
+                <button type="button" class="btn btn-info" onclick="showToast('info', 'Info', 'Processing your request...')">
+                    <i class="bi bi-info"></i> Info Toast
+                </button>
+            </div>
+        </div>
+
+        <!-- Usage Guide -->
+        <div class="demo-section">
+            <h3><i class="bi bi-book"></i> Usage Guide</h3>
+            <br>
+            <h5>Import the Notification System</h5>
+            <pre><code>&lt;script src="../assets/js/notifications.js"&gt;&lt;/script&gt;</code></pre>
+
+            <h5 class="mt-4">Available Functions</h5>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Parameters</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>showSuccessDialog()</code></td>
+                        <td>title, message, callback</td>
+                        <td>Show a success dialog</td>
+                    </tr>
+                    <tr>
+                        <td><code>showErrorDialog()</code></td>
+                        <td>title, message, callback</td>
+                        <td>Show an error dialog</td>
+                    </tr>
+                    <tr>
+                        <td><code>showWarningDialog()</code></td>
+                        <td>title, message, callback</td>
+                        <td>Show a warning dialog</td>
+                    </tr>
+                    <tr>
+                        <td><code>showInfoDialog()</code></td>
+                        <td>title, message, callback</td>
+                        <td>Show an info dialog</td>
+                    </tr>
+                    <tr>
+                        <td><code>showConfirmDialog()</code></td>
+                        <td>title, message, onConfirm, onCancel</td>
+                        <td>Show a confirmation dialog</td>
+                    </tr>
+                    <tr>
+                        <td><code>showLoadingDialog()</code></td>
+                        <td>message</td>
+                        <td>Show a loading dialog (returns object with hide() method)</td>
+                    </tr>
+                    <tr>
+                        <td><code>showToast()</code></td>
+                        <td>type, title, message</td>
+                        <td>Show a toast notification</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5 class="mt-4">Examples</h5>
+            <pre><code>// Success with callback
+showSuccessDialog('Success!', 'Department added.', function() {
+    location.reload();
+});
+
+// Confirmation
+showConfirmDialog('Delete?', 'Sure?', 
+    function() { console.log('Confirmed'); },
+    function() { console.log('Cancelled'); }
+);
+
+// Loading
+const loader = showLoadingDialog('Processing...');
+setTimeout(() => loader.hide(), 3000);
+
+// Toast
+showToast('success', 'Done!', 'Operation completed.');</code></pre>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/notifications.js"></script>
+    
+    <script>
+        function demoLoadingDialog() {
+            const loader = showLoadingDialog('Processing your request...');
+            setTimeout(() => {
+                loader.hide();
+                showSuccessDialog('Complete!', 'Operation finished.');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -17,20 +17,33 @@ $days = [];
 
 if ($db) {
     try {
-        $stmt = $db->query("SELECT s.*, ta.section as class_name, u.full_name, sub.name as subject_name
-                           FROM schedules s
-                           LEFT JOIN teacher_assignments ta ON s.assignment_id = ta.id
-                           LEFT JOIN teachers t ON ta.teacher_id = t.id
-                           LEFT JOIN users u ON t.user_id = u.id
-                           LEFT JOIN subjects sub ON ta.subject_id = sub.id
-                           ORDER BY s.day_of_week, s.start_time");
-        $schedules = $stmt->fetchAll();
+        // Check if required tables exist
+        $stmt = $db->query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'schedules')");
+        $schedulesExist = $stmt->fetchColumn();
         
-        // Get teachers for dropdown
-        $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t LEFT JOIN users u ON t.user_id = u.id ORDER BY u.full_name");
-        $teachers = $stmt->fetchAll();
+        if ($schedulesExist) {
+            $stmt = $db->query("SELECT s.*, ta.section as class_name, u.full_name, sub.name as subject_name
+                               FROM schedules s
+                               LEFT JOIN teacher_assignments ta ON s.assignment_id = ta.id
+                               LEFT JOIN teachers t ON ta.teacher_id = t.id
+                               LEFT JOIN users u ON t.user_id = u.id
+                               LEFT JOIN subjects sub ON ta.subject_id = sub.id
+                               ORDER BY s.day_of_week, s.start_time");
+            $schedules = $stmt->fetchAll();
+            
+            // Get teachers for dropdown
+            $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t LEFT JOIN users u ON t.user_id = u.id ORDER BY u.full_name");
+            $teachers = $stmt->fetchAll();
+        } else {
+            // Database not set up yet
+            $schedules = [];
+            $teachers = [];
+        }
     } catch (Exception $e) {
         error_log($e->getMessage());
+        // Database error - show empty data
+        $schedules = [];
+        $teachers = [];
     }
 }
 
@@ -56,9 +69,17 @@ $pageTitle = 'Schedules';
 
         <!-- Page Content -->
         <div class="content-wrapper">
+            <?php if (empty($teachers)): ?>
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle"></i> 
+                <strong>Database Setup Required:</strong> The database tables are not set up yet. Please run the database setup scripts to populate the required data.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <?php endif; ?>
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>Class Schedules</h2>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal" <?php echo empty($teachers) ? 'disabled' : ''; ?>>
                     <i class="bi bi-calendar-plus"></i> Add Schedule
                 </button>
             </div>
@@ -262,6 +283,8 @@ $pageTitle = 'Schedules';
             const form = document.getElementById('addScheduleForm');
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const teacherSelect = document.getElementById('scheduleTeacher');
+            const teacherName = teacherSelect.options[teacherSelect.selectedIndex].text.split('(')[0].trim();
 
             fetch('/api/admin/schedules.php', {
                 method: 'POST',
@@ -272,14 +295,15 @@ $pageTitle = 'Schedules';
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    showAlert('success', 'Schedule created successfully!');
+                    showSuccessDialog('Success!', `Schedule for "${teacherName}" created successfully.`, () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('addScheduleModal')).hide();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + result.message);
+                    showErrorDialog('Error!', result.message || 'Unknown error');
                 }
             })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            .catch(err => {
+                showErrorDialog('Error!', err.message);
+            });
         }
 
         function editSchedule(id) {
@@ -304,10 +328,12 @@ $pageTitle = 'Schedules';
                         
                         bootstrap.Modal.getOrCreateInstance(document.getElementById('editScheduleModal')).show();
                     } else {
-                        showAlert('error', 'Failed to load schedule');
+                        showErrorDialog('Error!', 'Failed to load schedule');
                     }
                 })
-                .catch(err => showAlert('error', 'Error: ' + err.message));
+                .catch(err => {
+                    showErrorDialog('Error!', err.message);
+                });
         }
 
         async function loadEditTeacherAssignments(teacherId, selectedAssignmentId = null) {
@@ -346,6 +372,7 @@ $pageTitle = 'Schedules';
             const form = document.getElementById('editScheduleForm');
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const dayOfWeek = document.getElementById('editDayOfWeek').value;
 
             fetch('/api/admin/schedules.php', {
                 method: 'PUT',
@@ -356,32 +383,37 @@ $pageTitle = 'Schedules';
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    showAlert('success', 'Schedule updated successfully!');
+                    showSuccessDialog('Updated!', `Schedule updated successfully.`, () => location.reload());
                     bootstrap.Modal.getInstance(document.getElementById('editScheduleModal')).hide();
-                    location.reload();
                 } else {
-                    showAlert('error', 'Error: ' + result.message);
+                    showErrorDialog('Error!', result.message || 'Unknown error');
                 }
             })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            .catch(err => {
+                showErrorDialog('Error!', err.message);
+            });
         }
 
         function deleteSchedule(id) {
-            if (!confirm('Are you sure?')) return;
-            fetch('/api/admin/schedules.php', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    showAlert('success', 'Schedule deleted!');
-                    location.reload();
-                } else {
-                    showAlert('error', 'Error: ' + result.message);
-                }
+            const row = event.target.closest('tr');
+            const teacherName = row.cells[0].textContent.trim();
+            const dayOfWeek = row.cells[2].textContent.trim();
+            
+            showConfirmDialog('Delete Schedule?', `Remove schedule for "${teacherName}" on ${dayOfWeek}?`, function() {
+                fetch('/api/admin/schedules.php', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id }),
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showSuccessDialog('Deleted!', `Schedule deleted successfully.`, () => location.reload());
+                    } else {
+                        showErrorDialog('Error!', result.message || 'Unknown error');
+                    }
+                });
             });
         }
     </script>
@@ -536,6 +568,7 @@ $pageTitle = 'Schedules';
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script>
         const days = <?php echo json_encode($days); ?>;
         const timeSlots = [

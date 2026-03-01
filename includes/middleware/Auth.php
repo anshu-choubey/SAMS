@@ -57,7 +57,7 @@ class Auth {
         $query = "SELECT s.*, u.id as user_id, u.role, u.is_active 
                   FROM sessions s 
                   JOIN users u ON s.user_id = u.id
-                  WHERE s.session_token = :session_id 
+                  WHERE s.session_id = :session_id 
                   AND s.expires_at > NOW()";
         
         $stmt = $db->prepare($query);
@@ -80,7 +80,7 @@ class Auth {
         $_SESSION['role'] = $session['role'];
 
         // Update last activity
-        $updateQuery = "UPDATE sessions SET last_activity = NOW() WHERE session_token = :session_id";
+        $updateQuery = "UPDATE sessions SET last_activity = NOW() WHERE session_id = :session_id";
         $updateStmt = $db->prepare($updateQuery);
         $updateStmt->bindParam(':session_id', $sessionId);
         $updateStmt->execute();
@@ -138,7 +138,7 @@ class Auth {
             $database = new Database();
             $db = $database->getConnection();
 
-            $query = "DELETE FROM sessions WHERE session_token = :session_id";
+            $query = "DELETE FROM sessions WHERE session_id = :session_id";
             $stmt = $db->prepare($query);
             $stmt->bindParam(':session_id', $_SESSION['session_id']);
             $stmt->execute();

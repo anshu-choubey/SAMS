@@ -208,6 +208,7 @@ $pageTitle = 'Departments';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script src="../assets/js/admin.js"></script>
     <script>
         // Pagination & Filter Variables
@@ -326,30 +327,35 @@ $pageTitle = 'Departments';
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    showAlert('success', 'Department created successfully!');
-                    bootstrap.Modal.getInstance(document.getElementById('addDepartmentModal')).hide();
-                    location.reload();
+                    showSuccessDialog('Success!', 'Department "' + data.name + '" has been added successfully.', function() {
+                        bootstrap.Modal.getInstance(document.getElementById('addDepartmentModal')).hide();
+                        location.reload();
+                    });
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', result.message || 'Failed to add department. Please try again.');
                 }
             })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            .catch(err => {
+                showErrorDialog('Error!', err.message || 'An error occurred while adding the department.');
+            });
         }
 
         // Load department data for editing
-        async function editDept(id) {
-            try {
-                const response = await fetch(`/api/admin/departments.php?id=${id}`, {
-                    credentials: 'include'
-                });
-
+        function editDept(id) {
+            fetch(`/api/admin/departments.php?id=${id}`, {
+                credentials: 'include'
+            })
+            .then(response => {
                 if (response.status === 401 || response.status === 403) {
-                    window.location.href = '/login.php';
-                    return;
+                    showErrorDialog('Session Expired', 'Your session has expired. Please login again.');
+                    setTimeout(() => window.location.href = '/login.php', 2000);
+                    return null;
                 }
-
-                const result = await response.json();
-
+                return response.json();
+            })
+            .then(result => {
+                if (!result) return;
+                
                 if (result.success && result.data && result.data.department) {
                     const dept = result.data.department;
                     
@@ -363,12 +369,13 @@ $pageTitle = 'Departments';
                     // Show modal
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('editDepartmentModal')).show();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to load department'));
+                    showErrorDialog('Error!', result.message || 'Failed to load department details. Please try again.');
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error:', error);
-                showAlert('error', 'Failed to load department data');
-            }
+                showErrorDialog('Error!', 'An error occurred while loading department details.');
+            });
         }
 
         // Update department
@@ -381,6 +388,7 @@ $pageTitle = 'Departments';
 
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const deptName = document.getElementById('editDeptName').value;
 
             try {
                 const response = await fetch('/api/admin/departments.php', {
@@ -393,38 +401,60 @@ $pageTitle = 'Departments';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'Department updated successfully!');
-                    bootstrap.Modal.getInstance(document.getElementById('editDepartmentModal')).hide();
-                    location.reload();
+                    showSuccessDialog('Updated!', 'Department "' + deptName + '" has been updated successfully.', function() {
+                        bootstrap.Modal.getInstance(document.getElementById('editDepartmentModal')).hide();
+                        location.reload();
+                    });
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to update department'));
+                    showErrorDialog('Error!', result.message || 'Failed to update the department.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('error', 'Failed to update department');
+                showErrorDialog('Error!', error.message || 'An error occurred while updating the department.');
             }
         }
 
         // Delete department
         function deleteDept(id) {
-            if (!confirm('Are you sure you want to delete this department? This action cannot be undone.')) return;
-            
-            fetch('/api/admin/departments.php', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
+            // Fetch department name first
+            fetch(`/api/admin/departments.php?id=${id}`, {
                 credentials: 'include'
             })
             .then(response => response.json())
             .then(result => {
-                if (result.success) {
-                    showAlert('success', 'Department deleted successfully!');
-                    location.reload();
+                if (result.success && result.data && result.data.department) {
+                    const deptName = result.data.department.name;
+                    showConfirmDialog(
+                        'Delete Department?',
+                        'Are you sure you want to delete "' + deptName + '"? This action cannot be undone.',
+                        function() {
+                            fetch('/api/admin/departments.php', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: id }),
+                                credentials: 'include'
+                            })
+                            .then(response => response.json())
+                            .then(result => {
+                                if (result.success) {
+                                    showSuccessDialog('Deleted!', '"' + deptName + '" has been deleted successfully.', function() {
+                                        location.reload();
+                                    });
+                                } else {
+                                    showErrorDialog('Error!', result.message || 'Failed to delete the department.');
+                                }
+                            })
+                            .catch(err => {
+                                showErrorDialog('Error!', err.message || 'An error occurred while deleting the department.');
+                            });
+                        }
+                    );
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to delete department'));
+                    showErrorDialog('Error!', 'Failed to load department information.');
                 }
             })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            .catch(err => {
+                showErrorDialog('Error!', 'An error occurred while loading department information.');
+            });
         }
     </script>
     <!-- Alert Container for Toast Notifications -->

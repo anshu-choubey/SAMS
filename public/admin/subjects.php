@@ -290,6 +290,7 @@ $pageTitle = 'Subjects';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/notifications.js"></script>
     <script src="../assets/js/admin.js"></script>
     <script>
         // Pagination & Filter Variables
@@ -421,14 +422,17 @@ $pageTitle = 'Subjects';
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    showAlert('success', 'Subject created successfully!');
-                    bootstrap.Modal.getInstance(document.getElementById('addSubjectModal')).hide();
-                    location.reload();
+                    showSuccessDialog('Success!', 'Subject "' + data.name + '" has been added successfully.', function() {
+                        bootstrap.Modal.getInstance(document.getElementById('addSubjectModal')).hide();
+                        location.reload();
+                    });
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Unknown error'));
+                    showErrorDialog('Error!', result.message || 'Failed to add subject. Please try again.');
                 }
             })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            .catch(err => {
+                showErrorDialog('Error!', err.message || 'An error occurred while adding the subject.');
+            });
         }
 
         // Load subject data for editing
@@ -439,6 +443,7 @@ $pageTitle = 'Subjects';
                 });
 
                 if (response.status === 401 || response.status === 403) {
+                    showErrorDialog('Session Expired', 'Your session has expired. Please login again.');
                     window.location.href = '/login.php';
                     return;
                 }
@@ -461,11 +466,10 @@ $pageTitle = 'Subjects';
                     // Show modal
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('editSubjectModal')).show();
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to load subject'));
+                    showErrorDialog('Error!', result.message || 'Failed to load subject details. Please try again.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('error', 'Failed to load subject data');
+                showErrorDialog('Error!', 'An error occurred while loading subject details.');
             }
         }
 
@@ -479,6 +483,7 @@ $pageTitle = 'Subjects';
 
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            const subjectName = document.getElementById('editSubjectName').value;
 
             try {
                 const response = await fetch('/api/admin/subjects.php', {
@@ -491,38 +496,46 @@ $pageTitle = 'Subjects';
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert('success', 'Subject updated successfully!');
-                    bootstrap.Modal.getInstance(document.getElementById('editSubjectModal')).hide();
-                    location.reload();
+                    showSuccessDialog('Updated!', 'Subject "' + subjectName + '" has been updated successfully.', function() {
+                        bootstrap.Modal.getInstance(document.getElementById('editSubjectModal')).hide();
+                        location.reload();
+                    });
                 } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to update subject'));
+                    showErrorDialog('Error!', result.message || 'Failed to update the subject.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('error', 'Failed to update subject');
+                showErrorDialog('Error!', error.message || 'An error occurred while updating the subject.');
             }
         }
 
         // Delete subject
         function deleteSubject(id) {
-            if (!confirm('Are you sure you want to delete this subject? This action cannot be undone.')) return;
-            
-            fetch('/api/admin/subjects.php', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    showAlert('success', 'Subject deleted successfully!');
-                    location.reload();
-                } else {
-                    showAlert('error', 'Error: ' + (result.message || 'Failed to delete subject'));
+            const subjectName = event.target.closest('tr').cells[0].textContent;
+            showConfirmDialog(
+                'Delete Subject?',
+                'Are you sure you want to delete "' + subjectName + '"? This action cannot be undone.',
+                function() {
+                    fetch('/api/admin/subjects.php', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id }),
+                        credentials: 'include'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            showSuccessDialog('Deleted!', '"' + subjectName + '" has been deleted successfully.', function() {
+                                location.reload();
+                            });
+                        } else {
+                            showErrorDialog('Error!', result.message || 'Failed to delete the subject.');
+                        }
+                    })
+                    .catch(err => {
+                        showErrorDialog('Error!', err.message || 'An error occurred while deleting the subject.');
+                    });
                 }
-            })
-            .catch(err => showAlert('error', 'Error: ' + err.message));
+            );
         }
     </script>
 </body>
