@@ -67,7 +67,13 @@ class AuthController {
         $stmt->bindParam(':ip_address', $ipAddress);
         $stmt->bindParam(':user_agent', $userAgent);
         $stmt->bindParam(':expires_at', $expiresAt);
-        $stmt->execute();
+        
+        try {
+            $stmt->execute();
+        } catch (Exception $e) {
+            // Log error but continue - sessions table insert should not block login
+            error_log('Session insert error: ' . $e->getMessage());
+        }
 
         // Build response matching Android LoginResponse model
         $responseData = [
@@ -83,50 +89,58 @@ class AuthController {
 
         // Include student profile if user is a student
         if ($user['role'] === 'student') {
-            $profileQuery = "SELECT s.id, s.roll_number, s.department_id, d.name as department_name,
-                                    s.semester, s.section, s.batch_year
-                             FROM students s
-                             JOIN departments d ON s.department_id = d.id
-                             WHERE s.user_id = :user_id";
-            $stmt = $this->db->prepare($profileQuery);
-            $stmt->bindParam(':user_id', $user['id']);
-            $stmt->execute();
-            $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($profile) {
-                $responseData['profile'] = [
-                    'id' => (int)$profile['id'],
-                    'roll_number' => $profile['roll_number'],
-                    'department_id' => (int)$profile['department_id'],
-                    'department_name' => $profile['department_name'],
-                    'semester' => (int)$profile['semester'],
-                    'section' => $profile['section'],
-                    'batch_year' => (int)$profile['batch_year']
-                ];
+            try {
+                $profileQuery = "SELECT s.id, s.roll_number, s.department_id, d.name as department_name,
+                                        s.semester, s.start_year, s.expected_graduation
+                                 FROM students s
+                                 LEFT JOIN departments d ON s.department_id = d.id
+                                 WHERE s.id = :user_id";
+                $stmt = $this->db->prepare($profileQuery);
+                $stmt->bindParam(':user_id', $user['id']);
+                $stmt->execute();
+                $profile = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($profile) {
+                    $responseData['profile'] = [
+                        'id' => (int)$profile['id'],
+                        'roll_number' => $profile['roll_number'],
+                        'department_id' => (int)$profile['department_id'],
+                        'department_name' => $profile['department_name'],
+                        'semester' => (int)$profile['semester'],
+                        'start_year' => (int)$profile['start_year'],
+                        'expected_graduation' => (int)$profile['expected_graduation']
+                    ];
+                }
+            } catch (Exception $e) {
+                error_log('Student profile fetch error: ' . $e->getMessage());
             }
         }
 
         // Include teacher profile if user is a teacher
         if ($user['role'] === 'teacher') {
-            $teacherQuery = "SELECT t.id, t.employee_id, t.primary_department_id as department_id, d.name as department_name,
-                                    t.designation, t.qualification
-                             FROM teachers t
-                             LEFT JOIN departments d ON t.primary_department_id = d.id
-                             WHERE t.user_id = :user_id";
-            $stmt = $this->db->prepare($teacherQuery);
-            $stmt->bindParam(':user_id', $user['id']);
-            $stmt->execute();
-            $teacherProfile = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($teacherProfile) {
-                $responseData['teacher_profile'] = [
-                    'id' => (int)$teacherProfile['id'],
-                    'employee_id' => $teacherProfile['employee_id'],
-                    'department_id' => (int)$teacherProfile['department_id'],
-                    'department_name' => $teacherProfile['department_name'],
-                    'designation' => $teacherProfile['designation'],
-                    'qualification' => $teacherProfile['qualification']
-                ];
+            try {
+                $teacherQuery = "SELECT t.id, t.employee_id, t.department_id, d.name as department_name,
+                                        t.specialization, t.qualification
+                                 FROM teachers t
+                                 LEFT JOIN departments d ON t.department_id = d.id
+                                 WHERE t.id = :user_id";
+                $stmt = $this->db->prepare($teacherQuery);
+                $stmt->bindParam(':user_id', $user['id']);
+                $stmt->execute();
+                $teacherProfile = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($teacherProfile) {
+                    $responseData['teacher_profile'] = [
+                        'id' => (int)$teacherProfile['id'],
+                        'employee_id' => $teacherProfile['employee_id'],
+                        'department_id' => (int)($teacherProfile['department_id'] ?? 0),
+                        'department_name' => $teacherProfile['department_name'],
+                        'specialization' => $teacherProfile['specialization'],
+                        'qualification' => $teacherProfile['qualification']
+                    ];
+                }
+            } catch (Exception $e) {
+                error_log('Teacher profile fetch error: ' . $e->getMessage());
             }
         }
 

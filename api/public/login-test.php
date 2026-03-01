@@ -47,8 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             http_response_code(401);
             echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             exit;
-        }
-        
         // Test password
         if (!password_verify($password, $user['password_hash'])) {
             http_response_code(401);
@@ -63,9 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
         
         // Create session record in database
-        $sessionStmt = $db->prepare("INSERT INTO sessions (user_id, session_id, ip_address, user_agent, expires_at) 
-                                     VALUES (?, ?, ?, ?, ?)");
-        $sessionStmt->execute([$user['id'], $sessionId, $ipAddress, $userAgent, $expiresAt]);
+        try {
+            $sessionStmt = $db->prepare("INSERT INTO sessions (user_id, session_id, ip_address, user_agent, expires_at) 
+                                         VALUES (?, ?, ?, ?, ?)");
+            $sessionStmt->execute([$user['id'], $sessionId, $ipAddress, $userAgent, $expiresAt]);
+        } catch (Exception $e) {
+            error_log("Session insert error: " . $e->getMessage());
+            // Continue anyway - don't block login if session insert fails
+        }
         
         // Set session
         $_SESSION['user_id'] = $user['id'];
@@ -89,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         ]);
         exit;
-        
     } catch (Exception $e) {
         error_log("Exception: " . $e->getMessage());
         http_response_code(500);
