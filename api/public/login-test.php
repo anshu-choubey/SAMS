@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             http_response_code(401);
             echo json_encode(['success' => false, 'message' => 'Invalid credentials']);
             exit;
+        }
         // Test password
         if (!password_verify($password, $user['password_hash'])) {
             http_response_code(401);
