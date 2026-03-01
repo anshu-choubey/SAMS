@@ -307,17 +307,32 @@ $pageTitle = 'Reports';
             }
             
             try {
-                let url = `/api/admin/reports.php?type=quick_stats&from=${data.date_from}&to=${data.date_to}`;
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+                
+                let url = `../api/admin/reports.php?type=quick_stats&from=${encodeURIComponent(data.date_from)}&to=${encodeURIComponent(data.date_to)}`;
                 if (data.department_id) {
-                    url += `&department_id=${data.department_id}`;
+                    url += `&department_id=${encodeURIComponent(data.department_id)}`;
                 }
                 
-                const response = await fetch(url, { credentials: 'include' });
+                const response = await fetch(url, { 
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 bootstrap.Modal.getInstance(document.getElementById('attendanceModal')).hide();
                 
-                if (result.success) {
+                if (result.success && result.data) {
                     const stats = result.data;
                     displayAttendanceReport(stats, data.date_from, data.date_to);
                     showSuccessDialog('Success!', 'Attendance report generated successfully.');
@@ -326,12 +341,27 @@ $pageTitle = 'Reports';
                     showErrorDialog('Error!', result.message || 'Failed to generate report');
                 }
             } catch (error) {
+                console.error('Report generation error:', error);
                 showErrorDialog('Error!', 'Error generating report: ' + error.message);
+            } finally {
+                const btn = form.parentElement.querySelector('button[onclick="generateAttendanceReport()"]');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download"></i> Generate Report';
+                }
             }
         }
 
         function displayAttendanceReport(stats, fromDate, toDate) {
             const reportList = document.getElementById('reportList');
+            
+            const verificationData = stats.verification_data || {
+                success: 0,
+                gps_failed: 0,
+                face_failed: 0,
+                both_failed: 0,
+                no_data: 0
+            };
             
             const reportHTML = `
                 <div class="card mb-3 report-item">
@@ -343,39 +373,49 @@ $pageTitle = 'Reports';
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-primary">${stats.overall_attendance || 0}%</h4>
+                                    <h4 class="mb-1 text-primary">${parseFloat(stats.overall_attendance || 0).toFixed(2)}%</h4>
                                     <small class="text-muted">Overall Attendance</small>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-success">${stats.students_above_75 || 0}</h4>
+                                    <h4 class="mb-1 text-success">${parseInt(stats.students_above_75 || 0)}</h4>
                                     <small class="text-muted">Students Above 75%</small>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-danger">${stats.low_attendance_count || 0}</h4>
+                                    <h4 class="mb-1 text-danger">${parseInt(stats.low_attendance_count || 0)}</h4>
                                     <small class="text-muted">Low Attendance</small>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-info">${stats.avg_face_confidence || 0}%</h4>
+                                    <h4 class="mb-1 text-info">${parseFloat(stats.avg_face_confidence || 0).toFixed(2)}%</h4>
                                     <small class="text-muted">Avg Face Confidence</small>
                                 </div>
                             </div>
                         </div>
-                        ${stats.verification_data ? `
                         <hr>
                         <h6>Verification Stats</h6>
                         <div class="row g-2">
-                            <div class="col-6 col-md-3"><span class="badge bg-success">Success: ${stats.verification_data.success || 0}</span></div>
-                            <div class="col-6 col-md-3"><span class="badge bg-warning">GPS Failed: ${stats.verification_data.gps_failed || 0}</span></div>
-                            <div class="col-6 col-md-3"><span class="badge bg-danger">Face Failed: ${stats.verification_data.face_failed || 0}</span></div>
-                            <div class="col-6 col-md-3"><span class="badge bg-dark">Both Failed: ${stats.verification_data.both_failed || 0}</span></div>
+                            <div class="col-6 col-md-3"><span class="badge bg-success">Success: ${parseInt(verificationData.success)}</span></div>
+                            <div class="col-6 col-md-3"><span class="badge bg-warning">GPS Failed: ${parseInt(verificationData.gps_failed)}</span></div>
+                            <div class="col-6 col-md-3"><span class="badge bg-danger">Face Failed: ${parseInt(verificationData.face_failed)}</span></div>
+                            <div class="col-6 col-md-3"><span class="badge bg-dark">Both Failed: ${parseInt(verificationData.both_failed)}</span></div>
                         </div>
-                        ` : ''}
+                        ${stats.trend_data && stats.trend_data.labels && stats.trend_data.labels.length > 0 ? `
+                        <hr>
+                        <h6>7-Day Trend</h6>
+                        <div class="row g-2">
+                            ${stats.trend_data.labels.map((label, idx) => `
+                                <div class="col-6 col-md-3">
+                                    <small class="text-muted">${label}</small><br>
+                                    <strong>${parseFloat(stats.trend_data.values[idx] || 0).toFixed(1)}%</strong>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ` : '<small class="text-muted d-block mt-2">No trend data available</small>'}
                     </div>
                 </div>
             `;
@@ -397,39 +437,76 @@ $pageTitle = 'Reports';
             }
             
             try {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+                
                 const today = new Date();
                 const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const fromDate = firstDay.toISOString().split('T')[0];
+                const toDate = today.toISOString().split('T')[0];
                 
-                const response = await fetch(`/api/admin/reports.php?type=student&from=${firstDay.toISOString().split('T')[0]}&to=${today.toISOString().split('T')[0]}&department_id=${data.department_id}`, { credentials: 'include' });
+                const url = `../api/admin/reports.php?type=student&from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&department_id=${encodeURIComponent(data.department_id)}`;
+                
+                const response = await fetch(url, { 
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
                 
-                if (result.success && result.data.report) {
-                    displayStudentReport(result.data.report, data);
+                if (result.success && result.data && result.data.report) {
+                    const reportData = Array.isArray(result.data.report) ? result.data.report : [];
+                    displayStudentReport(reportData, data);
                     showSuccessDialog('Success!', 'Student report generated successfully.');
                 } else {
-                    showErrorDialog('Error!', 'No data found or error: ' + (result.message || 'Unknown error'));
+                    const message = result.message || 'No data found';
+                    showErrorDialog('Notice', message);
                 }
             } catch (error) {
+                console.error('Report generation error:', error);
                 showErrorDialog('Error!', 'Error generating report: ' + error.message);
+            } finally {
+                const btn = form.parentElement.querySelector('button[onclick="generateStudentReport()"]');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download"></i> Generate Report';
+                }
             }
         }
 
         function displayStudentReport(report, formData) {
             const reportList = document.getElementById('reportList');
             
+            if (!report || report.length === 0) {
+                showWarningDialog('No Data', 'No student records found for the selected criteria');
+                return;
+            }
+            
             let tableRows = '';
             report.forEach((student, index) => {
-                const statusClass = student.percentage >= 75 ? 'success' : (student.percentage >= 50 ? 'warning' : 'danger');
+                const percentage = parseFloat(student.percentage || 0);
+                const statusClass = percentage >= 75 ? 'success' : (percentage >= 50 ? 'warning' : 'danger');
+                const attended = parseInt(student.attended || 0);
+                const totalClasses = parseInt(student.total_classes || 0);
+                
                 tableRows += `
                     <tr>
                         <td>${index + 1}</td>
-                        <td>${student.roll_number}</td>
-                        <td>${student.full_name}</td>
-                        <td>${student.total_classes || 0}</td>
-                        <td>${student.attended || 0}</td>
-                        <td><span class="badge bg-${statusClass}">${student.percentage || 0}%</span></td>
+                        <td>${student.roll_number || '-'}</td>
+                        <td>${student.full_name || '-'}</td>
+                        <td>${totalClasses}</td>
+                        <td>${attended}</td>
+                        <td><span class="badge bg-${statusClass}">${percentage.toFixed(2)}%</span></td>
                     </tr>
                 `;
             });
@@ -480,40 +557,74 @@ $pageTitle = 'Reports';
             }
             
             try {
-                let url = `/api/admin/teacher-assignments.php?`;
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+                
+                let url = `../api/admin/teacher-assignments.php?`;
                 if (data.department_id) {
-                    url += `department_id=${data.department_id}&`;
+                    url += `department_id=${encodeURIComponent(data.department_id)}&`;
                 }
                 
-                const response = await fetch(url, { credentials: 'include' });
+                const response = await fetch(url, { 
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 bootstrap.Modal.getInstance(document.getElementById('teacherModal')).hide();
                 
-                if (result.success && result.data.assignments) {
-                    displayTeacherReport(result.data.assignments, data);
+                if (result.success && result.data) {
+                    const assignments = Array.isArray(result.data.assignments) ? result.data.assignments : 
+                                       Array.isArray(result.data) ? result.data : [];
+                    displayTeacherReport(assignments, data);
                     showSuccessDialog('Success!', 'Teacher report generated successfully.');
                 } else {
-                    showErrorDialog('Error!', 'No data found');
+                    showErrorDialog('Notice', result.message || 'No data found');
                 }
             } catch (error) {
+                console.error('Report generation error:', error);
                 showErrorDialog('Error!', 'Error generating report: ' + error.message);
+            } finally {
+                const btn = form.parentElement.querySelector('button[onclick="generateTeacherReport()"]');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-download"></i> Generate Report';
+                }
             }
         }
 
         function displayTeacherReport(assignments, formData) {
             const reportList = document.getElementById('reportList');
             
+            if (!assignments || assignments.length === 0) {
+                showWarningDialog('No Data', 'No teacher assignments found for the selected criteria');
+                return;
+            }
+            
             let tableRows = '';
             assignments.forEach((assign, index) => {
+                const fullName = assign.full_name || '-';
+                const subjectName = assign.subject_name || '-';
+                const deptName = assign.dept_name || '-';
+                const semester = assign.semester || '-';
+                const isActive = Boolean(assign.is_active);
+                
                 tableRows += `
                     <tr>
                         <td>${index + 1}</td>
-                        <td>${assign.full_name || '-'}</td>
-                        <td>${assign.subject_name || '-'}</td>
-                        <td>${assign.dept_name || '-'}</td>
-                        <td>${assign.semester || '-'}</td>
-                        <td><span class="badge bg-${assign.is_active ? 'success' : 'danger'}">${assign.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td>${fullName}</td>
+                        <td>${subjectName}</td>
+                        <td>${deptName}</td>
+                        <td>${semester}</td>
+                        <td><span class="badge bg-${isActive ? 'success' : 'danger'}">${isActive ? 'Active' : 'Inactive'}</span></td>
                     </tr>
                 `;
             });
@@ -521,7 +632,7 @@ $pageTitle = 'Reports';
             const reportHTML = `
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-person-badge text-warning"></i> Teacher Report - ${formData.academic_year}</h6>
+                        <h6 class="mb-0"><i class="bi bi-person-badge text-warning"></i> Teacher Report - ${formData.academic_year || 'N/A'}</h6>
                         <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
                     </div>
                     <div class="card-body">
@@ -555,6 +666,7 @@ $pageTitle = 'Reports';
 
         async function generateSystemReport() {
             const form = document.getElementById('systemForm');
+            const btn = form.querySelector('button[type="submit"]');
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
             
@@ -563,60 +675,87 @@ $pageTitle = 'Reports';
                 return;
             }
             
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+            
             try {
-                // Get counts from various endpoints
-                const [usersRes, deptsRes, subjectsRes] = await Promise.all([
-                    fetch('/api/admin/users.php', { credentials: 'include' }),
-                    fetch('/api/admin/departments.php', { credentials: 'include' }),
-                    fetch('/api/admin/subjects.php', { credentials: 'include' })
+                // Fetch system statistics from API
+                const responses = await Promise.all([
+                    fetch('../api/admin/users.php', { credentials: 'include' }),
+                    fetch('../api/admin/departments.php', { credentials: 'include' }),
+                    fetch('../api/admin/subjects.php', { credentials: 'include' })
                 ]);
                 
-                const users = await usersRes.json();
-                const depts = await deptsRes.json();
-                const subjects = await subjectsRes.json();
+                for (const response of responses) {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                }
+                
+                const users = await responses[0].json();
+                const depts = await responses[1].json();
+                const subjects = await responses[2].json();
+                
+                // Extract data safely
+                const userCount = parseInt(users?.data?.total || users?.data?.users?.length || 0);
+                const deptCount = parseInt(depts?.data?.departments?.length || depts?.data?.total || 0);
+                const subjectCount = parseInt(subjects?.data?.subjects?.length || subjects?.data?.total || 0);
                 
                 bootstrap.Modal.getInstance(document.getElementById('systemModal')).hide();
                 
                 displaySystemReport({
-                    users: users.data?.users?.length || users.data?.total || 0,
-                    departments: depts.data?.departments?.length || 0,
-                    subjects: subjects.data?.subjects?.length || 0,
+                    users: userCount,
+                    departments: deptCount,
+                    subjects: subjectCount,
                     dateFrom: data.date_from,
                     dateTo: data.date_to,
                     reportType: data.report_type
                 });
+                
                 showSuccessDialog('Success!', 'System report generated successfully.');
             } catch (error) {
-                showErrorDialog('Error!', 'Error generating report: ' + error.message);
+                console.error('System report generation error:', error);
+                showErrorDialog('Error!', 'Error generating report: ' + (error.message || 'Unknown error'));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 
         function displaySystemReport(stats) {
             const reportList = document.getElementById('reportList');
             
+            // Ensure values are safe to display
+            const users = parseInt(stats?.users || 0);
+            const departments = parseInt(stats?.departments || 0);
+            const subjects = parseInt(stats?.subjects || 0);
+            const dateFrom = stats?.dateFrom || 'N/A';
+            const dateTo = stats?.dateTo || 'N/A';
+            
             const reportHTML = `
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-file-earmark text-danger"></i> System Report (${stats.dateFrom} to ${stats.dateTo})</h6>
+                        <h6 class="mb-0"><i class="bi bi-file-earmark text-danger"></i> System Report (${dateFrom} to ${dateTo})</h6>
                         <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-primary">${stats.users}</h4>
+                                    <h4 class="mb-1 text-primary">${users}</h4>
                                     <small class="text-muted">Total Users</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-success">${stats.departments}</h4>
+                                    <h4 class="mb-1 text-success">${departments}</h4>
                                     <small class="text-muted">Departments</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="border rounded p-3 text-center">
-                                    <h4 class="mb-1 text-info">${stats.subjects}</h4>
+                                    <h4 class="mb-1 text-info">${subjects}</h4>
                                     <small class="text-muted">Subjects</small>
                                 </div>
                             </div>
