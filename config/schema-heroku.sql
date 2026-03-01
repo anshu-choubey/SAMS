@@ -354,7 +354,7 @@ INSERT INTO system_settings (setting_key, setting_value, description, setting_ty
 -- Password: Admin@123 (pre-hashed)
 -- =====================================================
 INSERT INTO users (full_name, email, password_hash, role, is_active) VALUES
-('Administrator', 'admin@sams.edu', '$2y$10$YOjlW5KrYr2EqInnVmYmq.7vxPqo0yJ7zNDFVgPKpN5eJQEVZeNWi', 'admin', TRUE)
+('Administrator', 'admin@sams.edu', '$2y$12$s3blvAa6epcQAWruexnHt.UULDNaZKx3Ud0jiwwIYqz1TwrfoKom.', 'admin', TRUE)
 ON DUPLICATE KEY UPDATE id=id;
 
 -- =====================================================
