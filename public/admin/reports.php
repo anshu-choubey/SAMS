@@ -296,6 +296,13 @@ $pageTitle = 'Reports';
             });
         });
 
+        // Store report data globally for CSV export
+        let lastReportData = {
+            type: null,
+            data: null,
+            formData: null
+        };
+
         async function generateAttendanceReport() {
             const form = document.getElementById('attendanceForm');
             const formData = new FormData(form);
@@ -367,7 +374,12 @@ $pageTitle = 'Reports';
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="bi bi-graph-up text-primary"></i> Attendance Report (${fromDate} to ${toDate})</h6>
-                        <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                        <div class="d-flex gap-2 align-items-center">
+                            <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                            <button class="btn btn-sm btn-outline-primary" onclick="downloadAttendanceReportCSV()" title="Download as CSV">
+                                <i class="bi bi-download"></i> CSV
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -492,6 +504,13 @@ $pageTitle = 'Reports';
                 return;
             }
             
+            // Store for CSV export
+            lastReportData = {
+                type: 'student',
+                data: report,
+                formData: formData
+            };
+            
             let tableRows = '';
             report.forEach((student, index) => {
                 const percentage = parseFloat(student.percentage || 0);
@@ -515,7 +534,12 @@ $pageTitle = 'Reports';
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="bi bi-people text-success"></i> Student Report - Semester ${formData.semester}</h6>
-                        <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                        <div class="d-flex gap-2 align-items-center">
+                            <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                            <button class="btn btn-sm btn-outline-success" onclick="downloadStudentReportCSV()" title="Download as CSV">
+                                <i class="bi bi-download"></i> CSV
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -609,6 +633,13 @@ $pageTitle = 'Reports';
                 return;
             }
             
+            // Store for CSV export
+            lastReportData = {
+                type: 'teacher',
+                data: assignments,
+                formData: formData
+            };
+            
             let tableRows = '';
             assignments.forEach((assign, index) => {
                 const fullName = assign.full_name || '-';
@@ -633,7 +664,12 @@ $pageTitle = 'Reports';
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="bi bi-person-badge text-warning"></i> Teacher Report - ${formData.academic_year || 'N/A'}</h6>
-                        <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                        <div class="d-flex gap-2 align-items-center">
+                            <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                            <button class="btn btn-sm btn-outline-warning" onclick="downloadTeacherReportCSV()" title="Download as CSV">
+                                <i class="bi bi-download"></i> CSV
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -733,11 +769,23 @@ $pageTitle = 'Reports';
             const dateFrom = stats?.dateFrom || 'N/A';
             const dateTo = stats?.dateTo || 'N/A';
             
+            // Store for CSV export
+            lastReportData = {
+                type: 'system',
+                data: stats,
+                formData: null
+            };
+            
             const reportHTML = `
                 <div class="card mb-3 report-item">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="bi bi-file-earmark text-danger"></i> System Report (${dateFrom} to ${dateTo})</h6>
-                        <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                        <div class="d-flex gap-2 align-items-center">
+                            <small class="text-muted">Generated: ${new Date().toLocaleString()}</small>
+                            <button class="btn btn-sm btn-outline-danger" onclick="downloadSystemReportCSV()" title="Download as CSV">
+                                <i class="bi bi-download"></i> CSV
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -768,6 +816,136 @@ $pageTitle = 'Reports';
                 reportList.innerHTML = '';
             }
             reportList.insertAdjacentHTML('afterbegin', reportHTML);
+        }
+
+        // CSV Export Functions
+        function convertToCSV(data, headers) {
+            if (!data || data.length === 0) return '';
+            
+            // Create CSV header
+            let csv = headers.map(h => `"${h}"`).join(',') + '\n';
+            
+            // Add data rows
+            data.forEach(row => {
+                const values = headers.map(header => {
+                    const value = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+                    // Escape quotes and wrap in quotes
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csv += values.join(',') + '\n';
+            });
+            
+            return csv;
+        }
+
+        function downloadCSV(filename, csvContent) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function downloadAttendanceReportCSV() {
+            if (!lastReportData.data || lastReportData.type !== 'attendance') {
+                showWarningDialog('No Data', 'No attendance report data available');
+                return;
+            }
+            
+            const stats = lastReportData.data;
+            const csvContent = `ATTENDANCE REPORT
+Generated: ${new Date().toLocaleString()}
+
+Overall Attendance,${parseFloat(stats.overall_attendance || 0).toFixed(2)}%
+Students Above 75%,${parseInt(stats.students_above_75 || 0)}
+Low Attendance Count,${parseInt(stats.low_attendance_count || 0)}
+Average Face Confidence,${parseFloat(stats.avg_face_confidence || 0).toFixed(2)}%
+
+Verification Stats
+Type,Count
+Successful,${parseInt(stats.verification_data?.success || 0)}
+GPS Failed,${parseInt(stats.verification_data?.gps_failed || 0)}
+Face Failed,${parseInt(stats.verification_data?.face_failed || 0)}
+Both Failed,${parseInt(stats.verification_data?.both_failed || 0)}
+`;
+            
+            const filename = `Attendance_Report_${new Date().getTime()}.csv`;
+            downloadCSV(filename, csvContent);
+            showSuccessDialog('Success!', `Report downloaded as ${filename}`);
+        }
+
+        function downloadStudentReportCSV() {
+            if (!lastReportData.data || lastReportData.type !== 'student' || !Array.isArray(lastReportData.data)) {
+                showWarningDialog('No Data', 'No student report data available');
+                return;
+            }
+            
+            const students = lastReportData.data;
+            const headers = ['Roll Number', 'Full Name', 'Total Classes', 'Attended', 'Percentage'];
+            
+            const data = students.map(student => ({
+                'Roll Number': student.roll_number || '-',
+                'Full Name': student.full_name || '-',
+                'Total Classes': parseInt(student.total_classes || 0),
+                'Attended': parseInt(student.attended || 0),
+                'Percentage': parseFloat(student.percentage || 0).toFixed(2) + '%'
+            }));
+            
+            const csvContent = convertToCSV(data, headers);
+            const filename = `Student_Report_${new Date().getTime()}.csv`;
+            downloadCSV(filename, csvContent);
+            showSuccessDialog('Success!', `Report downloaded as ${filename}`);
+        }
+
+        function downloadTeacherReportCSV() {
+            if (!lastReportData.data || lastReportData.type !== 'teacher' || !Array.isArray(lastReportData.data)) {
+                showWarningDialog('No Data', 'No teacher report data available');
+                return;
+            }
+            
+            const teachers = lastReportData.data;
+            const headers = ['Teacher', 'Subject', 'Department', 'Semester', 'Status'];
+            
+            const data = teachers.map(teacher => ({
+                'Teacher': teacher.full_name || '-',
+                'Subject': teacher.subject_name || '-',
+                'Department': teacher.dept_name || '-',
+                'Semester': teacher.semester || '-',
+                'Status': teacher.is_active ? 'Active' : 'Inactive'
+            }));
+            
+            const csvContent = convertToCSV(data, headers);
+            const filename = `Teacher_Report_${new Date().getTime()}.csv`;
+            downloadCSV(filename, csvContent);
+            showSuccessDialog('Success!', `Report downloaded as ${filename}`);
+        }
+
+        function downloadSystemReportCSV() {
+            if (!lastReportData.data || lastReportData.type !== 'system') {
+                showWarningDialog('No Data', 'No system report data available');
+                return;
+            }
+            
+            const stats = lastReportData.data;
+            const csvContent = `SYSTEM REPORT
+Generated: ${new Date().toLocaleString()}
+Period: ${stats.dateFrom} to ${stats.dateTo}
+
+Metric,Count
+Total Users,${parseInt(stats.users || 0)}
+Departments,${parseInt(stats.departments || 0)}
+Subjects,${parseInt(stats.subjects || 0)}
+`;
+            
+            const filename = `System_Report_${new Date().getTime()}.csv`;
+            downloadCSV(filename, csvContent);
+            showSuccessDialog('Success!', `Report downloaded as ${filename}`);
         }
 
         function addReportToList(name, date, format, data) {
