@@ -24,17 +24,21 @@ if ($db) {
         
         if ($deptExists) {
             // Get assignments
-            $stmt = $db->query("SELECT ta.*, u.full_name, sub.name as subject_name, d.name as dept_name
+            $stmt = $db->query("SELECT ta.*, u.full_name, u.is_active, sub.name as subject_name, d.name as dept_name
                                FROM teacher_assignments ta
-                               LEFT JOIN teachers t ON ta.teacher_id = t.id
-                               LEFT JOIN users u ON t.user_id = u.id
+                               INNER JOIN teachers t ON ta.teacher_id = t.id
+                               INNER JOIN users u ON t.user_id = u.id AND u.is_active = true
                                LEFT JOIN subjects sub ON ta.subject_id = sub.id
                                LEFT JOIN departments d ON ta.department_id = d.id
+                               WHERE u.is_active = true
                                ORDER BY u.full_name");
             $assignments = $stmt->fetchAll();
             
-            // Get teachers for dropdown
-            $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t LEFT JOIN users u ON t.user_id = u.id ORDER BY u.full_name");
+            // Get teachers for dropdown - only active teachers with valid users
+            $stmt = $db->query("SELECT t.id, u.full_name, t.employee_id FROM teachers t 
+                               INNER JOIN users u ON t.user_id = u.id AND u.is_active = true 
+                               WHERE u.is_active = true
+                               ORDER BY u.full_name");
             $teachers = $stmt->fetchAll();
             
             // Get departments for dropdown
@@ -488,7 +492,7 @@ $pageTitle = 'Assignments';
                 if (result.success && result.data.assignment) {
                     const assign = result.data.assignment;
                     document.getElementById('editAssignmentId').value = assign.id;
-                    document.getElementById('editTeacherName').value = assign.full_name || 'Unknown Teacher';
+                    document.getElementById('editTeacherName').value = assign.teacher_name || 'Unknown Teacher';
                     document.getElementById('editSubjectId').value = assign.subject_id;
                     document.getElementById('editDepartmentId').value = assign.department_id;
                     document.getElementById('editSemester').value = assign.semester || '';

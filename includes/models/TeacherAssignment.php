@@ -88,8 +88,8 @@ class TeacherAssignment {
                   JOIN subjects s ON ta.subject_id = s.id
                   JOIN departments d ON ta.department_id = d.id
                   JOIN teachers t ON ta.teacher_id = t.id
-                  JOIN users u ON t.user_id = u.id
-                  WHERE ta.teacher_id = :teacher_id AND ta.is_active = TRUE
+                  JOIN users u ON t.user_id = u.id AND u.is_active = TRUE
+                  WHERE ta.teacher_id = :teacher_id AND ta.is_active = TRUE AND u.is_active = TRUE
                   ORDER BY d.name, s.name";
 
         $stmt = $this->conn->prepare($query);
@@ -134,8 +134,8 @@ class TeacherAssignment {
                   JOIN subjects s ON ta.subject_id = s.id
                   JOIN departments d ON ta.department_id = d.id
                   JOIN teachers t ON ta.teacher_id = t.id
-                  JOIN users u ON t.user_id = u.id
-                  WHERE ta.id = :id LIMIT 1";
+                  JOIN users u ON t.user_id = u.id AND u.is_active = TRUE
+                  WHERE ta.id = :id AND u.is_active = TRUE LIMIT 1";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -225,8 +225,8 @@ class TeacherAssignment {
                   JOIN subjects s ON ta.subject_id = s.id
                   JOIN departments d ON ta.department_id = d.id
                   JOIN teachers t ON ta.teacher_id = t.id
-                  JOIN users u ON t.user_id = u.id
-                  WHERE 1=1";
+                  JOIN users u ON t.user_id = u.id AND u.is_active = TRUE
+                  WHERE u.is_active = TRUE";
 
         if (!empty($filters['department_id'])) {
             $query .= " AND ta.department_id = :department_id";
