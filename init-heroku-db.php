@@ -52,10 +52,15 @@ try {
     // Select database
     $pdo->exec("USE `{$db_name}`");
     
-    // Read schema file
-    $schema_file = __DIR__ . '/config/schema.sql';
+    // Read schema file (use Heroku-compatible schema)
+    $schema_file = __DIR__ . '/config/schema-heroku.sql';
     if (!file_exists($schema_file)) {
-        die("ERROR: Schema file not found at {$schema_file}\n");
+        // Fallback to regular schema if Heroku version doesn't exist
+        $schema_file = __DIR__ . '/config/schema.sql';
+    }
+    
+    if (!file_exists($schema_file)) {
+        die("ERROR: Schema file not found\n");
     }
     
     echo "Reading schema from: {$schema_file}\n";
