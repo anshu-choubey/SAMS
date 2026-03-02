@@ -5,13 +5,60 @@
  * Matches Android app's TeacherDashboardData model
  */
 
+// Start output buffering to prevent early header issues
+ob_start();
+
+// Capture fatal errors BEFORE any output
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    ob_end_clean(); // Clear any buffered output
+    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error',
+        'error' => $errstr,
+        'file' => basename($errfile),
+        'line' => $errline
+    ]);
+    exit;
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+        ob_end_clean(); // Clear any buffered output
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Server error',
+            'error' => $error['message'],
+            'file' => basename($error['file']),
+            'line' => $error['line']
+        ]);
+    }
+});
+
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../includes/middleware/CORS.php';
-require_once __DIR__ . '/../../includes/middleware/Auth.php';
-require_once __DIR__ . '/../../includes/helpers/Response.php';
+try {
+    require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../config/constants.php';
+    require_once __DIR__ . '/../../includes/middleware/CORS.php';
+    require_once __DIR__ . '/../../includes/middleware/Auth.php';
+    require_once __DIR__ . '/../../includes/helpers/Response.php';
+} catch (Exception $e) {
+    error_log("Include error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error - could not load required files',
+        'error' => $e->getMessage()
+    ]);
+    exit;
+}
 
 // Handle CORS
 CORS::handle();
