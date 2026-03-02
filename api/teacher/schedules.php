@@ -17,12 +17,12 @@ require_once __DIR__ . '/../../includes/helpers/Validator.php';
 CORS::handle();
 
 try {
-    // Check authentication - allow both admin and teacher roles
+    // Check authentication and get user info
     // Teachers can access their own schedules, admin can access all
-    Auth::requireAuth();
+    $user = Auth::user();
     
-    $userRole = Auth::getRole();
-    $userId = Auth::getUserId();
+    $userRole = $user['role'];
+    $userId = $user['id'];
 
     // Get database connection
     $database = new Database();
