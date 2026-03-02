@@ -9,7 +9,7 @@ class Response {
      * Send success response
      */
     public static function success($data = [], $message = 'Success', $statusCode = 200) {
-        self::setHttpStatus($statusCode);
+        http_response_code($statusCode);
         echo json_encode([
             'success' => true,
             'message' => $message,
@@ -23,7 +23,7 @@ class Response {
      * Send error response
      */
     public static function error($message = 'An error occurred', $statusCode = 400, $errors = []) {
-        self::setHttpStatus($statusCode);
+        http_response_code($statusCode);
         echo json_encode([
             'success' => false,
             'message' => $message,
@@ -48,24 +48,6 @@ class Response {
     }
 
     /**
-     * Set HTTP status code safely
-     * Works with or without output buffering
-     */
-    private static function setHttpStatus($code) {
-        $statusMessages = [
-            200 => '200 OK',
-            201 => '201 Created',
-            400 => '400 Bad Request',
-            401 => '401 Unauthorized',
-            403 => '403 Forbidden',
-            404 => '404 Not Found',
-            422 => '422 Unprocessable Entity',
-            500 => '500 Internal Server Error'
-        ];
-        
-        $statusMessage = $statusMessages[$code] ?? "$code Unknown";
-        header("HTTP/1.1 $statusMessage");
-    }
      * Send forbidden response
      */
     public static function forbidden($message = 'Access forbidden') {

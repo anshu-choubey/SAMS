@@ -1,32 +1,5 @@
 <?php
 header('Content-Type: application/json');
-ob_start();
-
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    ob_end_clean();
-    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
-    header('HTTP/1.1 500 Internal Server Error');
-    echo json_encode([
-        'success' => false,
-        'message' => 'Server error: ' . $errstr,
-        'error' => $errstr
-    ]);
-    exit;
-});
-
-register_shutdown_function(function() {
-    $error = error_get_last();
-    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        ob_end_clean();
-        error_log("Fatal Error: " . $error['message']);
-        header('HTTP/1.1 500 Internal Server Error');
-        echo json_encode([
-            'success' => false,
-            'message' => 'Server error: ' . $error['message'],
-            'error' => $error['message']
-        ]);
-    }
-});
 
 try {
     require_once __DIR__ . '/../../config/database.php';
@@ -37,7 +10,6 @@ try {
     require_once __DIR__ . '/../../includes/helpers/Validator.php';
     require_once __DIR__ . '/../../includes/models/Attendance.php';
 } catch (Exception $e) {
-    ob_end_clean();
     error_log("Include error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
@@ -62,12 +34,10 @@ try {
     $user = Auth::user();
 
     if (!$user) {
-        ob_end_clean();
         Response::unauthorized('Please login to continue');
     }
 
     if ($user['role'] !== 'teacher') {
-        ob_end_clean();
         Response::error('Access restricted to teachers only', 403);
     }
 
@@ -80,7 +50,6 @@ try {
     $validator->required('session_id', $data['session_id'] ?? '', 'Session ID');
 
     if ($validator->hasErrors()) {
-        ob_end_clean();
         Response::validationError($validator->getErrors());
     }
 
@@ -92,7 +61,6 @@ try {
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$teacher) {
-        ob_end_clean();
         Response::error('Teacher profile not found', 404);
     }
 
@@ -109,13 +77,11 @@ try {
     $session = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$session) {
-        ob_end_clean();
         Response::error('Session not found or not owned by you', 404);
     }
 
     // ✅ Cast to int — DB may return "0"/"1" string instead of boolean
     if ((int)$session['is_active'] !== 1) {
-        ob_end_clean();
         Response::error('Session already ended', 400);
     }
 
@@ -170,7 +136,6 @@ try {
     $absent = $totalStudents - $present;
     $percentage = $totalStudents > 0 ? round(($present / $totalStudents) * 100, 2) : 0;
 
-    ob_end_clean();
     Response::success([
         'session_id'           => (int)$data['session_id'],
         'ended_at'             => date('Y-m-d H:i:s'),
@@ -182,9 +147,8 @@ try {
     ], 'Class session ended successfully. ' . ($absentResult['message'] ?? ''));
 
 } catch (Exception $e) {
-    ob_end_clean();
     error_log('End class error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
-    header('HTTP/1.1 500 Internal Server Error');
+    http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $e->getMessage(),
