@@ -1,10 +1,18 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Max-Age: 86400");
+
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit;
+}
 header('Content-Type: application/json');
 
 try {
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../config/constants.php';
-    require_once __DIR__ . '/../../includes/middleware/CORS.php';
     require_once __DIR__ . '/../../includes/middleware/Auth.php';
     require_once __DIR__ . '/../../includes/helpers/Response.php';
     require_once __DIR__ . '/../../includes/helpers/Validator.php';
@@ -19,9 +27,6 @@ try {
     ]);
     exit;
 }
-
-// Handle CORS
-CORS::handle();
 
 // Only POST method allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
