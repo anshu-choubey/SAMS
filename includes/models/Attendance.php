@@ -424,7 +424,7 @@ class Attendance {
                                (student_id, schedule_id, assignment_id, teacher_id, department_id, 
                                 attendance_date, verification_status, status, remarks) 
                                VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id,
-                                       :attendance_date, 'success', 'absent', 'Auto-marked absent when class ended');
+                                       :attendance_date, 'success', 'absent', 'Auto-marked absent when class ended')";
                 
                 $stmt = $this->conn->prepare($insertQuery);
                 $stmt->bindParam(':student_id', $student['student_id']);
