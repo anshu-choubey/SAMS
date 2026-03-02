@@ -7,13 +7,53 @@
 
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../includes/middleware/CORS.php';
-require_once __DIR__ . '/../../includes/middleware/Auth.php';
-require_once __DIR__ . '/../../includes/helpers/Response.php';
-require_once __DIR__ . '/../../includes/helpers/Validator.php';
-require_once __DIR__ . '/../../includes/models/Attendance.php';
+// Capture fatal errors
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error',
+        'error' => $errstr,
+        'file' => basename($errfile),
+        'line' => $errline
+    ]);
+    exit;
+});
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Server error',
+            'error' => $error['message'],
+            'file' => basename($error['file']),
+            'line' => $error['line']
+        ]);
+    }
+});
+
+try {
+    require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../config/constants.php';
+    require_once __DIR__ . '/../../includes/middleware/CORS.php';
+    require_once __DIR__ . '/../../includes/middleware/Auth.php';
+    require_once __DIR__ . '/../../includes/helpers/Response.php';
+    require_once __DIR__ . '/../../includes/helpers/Validator.php';
+    require_once __DIR__ . '/../../includes/models/Attendance.php';
+} catch (Exception $e) {
+    error_log("Include error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error - could not load required files',
+        'error' => $e->getMessage()
+    ]);
+    exit;
+}
 
 // Handle CORS
 CORS::handle();
