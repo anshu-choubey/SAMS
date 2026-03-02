@@ -27,6 +27,10 @@ try {
     // Check authentication and role
     $user = Auth::user();
     
+    if (!$user) {
+        Response::unauthorized('Please login to continue');
+    }
+    
     if ($user['role'] !== 'teacher') {
         Response::error('Access restricted to teachers only', 403);
     }

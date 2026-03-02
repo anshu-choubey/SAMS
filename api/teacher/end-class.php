@@ -29,6 +29,10 @@ try {
     // Check authentication and role
     $user = Auth::user();
     
+    if (!$user) {
+        Response::unauthorized('Please login to continue');
+    }
+    
     if ($user['role'] !== 'teacher') {
         Response::error('Access restricted to teachers only', 403);
     }
@@ -136,10 +140,13 @@ try {
     ], 'Class session ended successfully. ' . ($absentResult['message'] ?? ''));
 
 } catch (Exception $e) {
+    error_log('End class error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Server error: ' . $e->getMessage()
+        'message' => 'Server error: ' . $e->getMessage(),
+        'error' => $e->getMessage()
     ]);
+    exit;
 }
 ?>
