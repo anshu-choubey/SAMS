@@ -174,7 +174,6 @@ try {
     $percentage = $totalStudents > 0 ? round(($present / $totalStudents) * 100, 2) : 0;
 
     // Return EndClassResponse
-    ob_end_clean(); // Clean output buffer before sending response
     Response::success([
         'session_id' => (int)$data['session_id'],
         'ended_at' => date('Y-m-d H:i:s'),
@@ -186,10 +185,8 @@ try {
     ], 'Class session ended successfully. ' . ($absentResult['message'] ?? ''));
 
 } catch (Exception $e) {
-    ob_end_clean(); // Clean output buffer before sending error
     error_log('End class error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
-    header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $e->getMessage(),
