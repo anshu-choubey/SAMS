@@ -48,10 +48,16 @@ try {
     $validator->numeric('latitude', $data['latitude'] ?? '', 'Latitude');
     $validator->numeric('longitude', $data['longitude'] ?? '', 'Longitude');
     $validator->numeric('face_confidence', $data['face_confidence'] ?? '', 'Face Confidence');
-    $validator->range('face_confidence', $data['face_confidence'] ?? 0, 0, 100, 'Face Confidence');
+    $validator->range('face_confidence', $data['face_confidence'] ?? 0, 75, 100, 'Face Confidence');
 
     if ($validator->hasErrors()) {
         Response::validationError($validator->getErrors());
+    }
+
+    // Ensure face confidence is above minimum threshold (75%)
+    $minimumConfidence = 75;
+    if ($data['face_confidence'] < $minimumConfidence) {
+        Response::error('Face verification failed. Confidence: ' . round($data['face_confidence']) . '% (minimum required: ' . $minimumConfidence . '%)', 400);
     }
 
     // Get current user
