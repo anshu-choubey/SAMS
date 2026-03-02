@@ -5,12 +5,13 @@
  * Matches Android app's EndClassResponse model
  */
 
-header('Content-Type: application/json');
-
-// Capture fatal errors
+// Capture fatal errors BEFORE any output
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
-    http_response_code(500);
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
     echo json_encode([
         'success' => false,
         'message' => 'Server error',
@@ -25,7 +26,10 @@ register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
         error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
-        http_response_code(500);
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+        }
         echo json_encode([
             'success' => false,
             'message' => 'Server error',
@@ -35,6 +39,8 @@ register_shutdown_function(function() {
         ]);
     }
 });
+
+header('Content-Type: application/json');
 
 try {
     require_once __DIR__ . '/../../config/database.php';
