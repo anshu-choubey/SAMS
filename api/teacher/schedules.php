@@ -17,8 +17,12 @@ require_once __DIR__ . '/../../includes/helpers/Validator.php';
 CORS::handle();
 
 try {
-    // Check authentication and role
-    Auth::hasRole('admin');
+    // Check authentication - allow both admin and teacher roles
+    // Teachers can access their own schedules, admin can access all
+    Auth::requireAuth();
+    
+    $userRole = Auth::getRole();
+    $userId = Auth::getUserId();
 
     // Get database connection
     $database = new Database();
@@ -36,6 +40,10 @@ try {
                 if (!$result) {
                     Response::notFound('Schedule not found');
                 }
+                // Teachers can only view their own schedules
+                if ($userRole === 'teacher' && $result['teacher_id'] != $userId) {
+                    Response::error('Access denied - can only view your own schedules', 403);
+                }
                 Response::success(['schedule' => $result]);
             } else {
                 // Get all schedules with filters
@@ -45,13 +53,22 @@ try {
                     'day_of_week' => $_GET['day_of_week'] ?? null,
                     'is_active' => isset($_GET['is_active']) ? (bool)$_GET['is_active'] : null
                 ];
+                
+                // If teacher role, filter to only their schedules
+                if ($userRole === 'teacher') {
+                    $filters['teacher_id'] = $userId;
+                }
+                
                 $schedules = $schedule->getAll($filters);
                 Response::success(['schedules' => $schedules]);
             }
             break;
 
         case 'POST':
-            // Create new schedule
+            // Create new schedule - admin only
+            if ($userRole !== 'admin') {
+                Response::error('Only admin can create schedules', 403);
+            }
             $data = json_decode(file_get_contents('php://input'), true);
 
             // Validate
@@ -91,7 +108,10 @@ try {
             break;
 
         case 'PUT':
-            // Update schedule
+            // Update schedule - admin only
+            if ($userRole !== 'admin') {
+                Response::error('Only admin can update schedules', 403);
+            }
             $data = json_decode(file_get_contents('php://input'), true);
 
             if (!isset($data['id'])) {
@@ -130,7 +150,10 @@ try {
             break;
 
         case 'DELETE':
-            // Delete schedule
+            // Delete schedule - admin only
+            if ($userRole !== 'admin') {
+                Response::error('Only admin can delete schedules', 403);
+            }
             $data = json_decode(file_get_contents('php://input'), true);
 
             if (!isset($data['id'])) {
