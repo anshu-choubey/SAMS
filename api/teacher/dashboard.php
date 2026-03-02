@@ -115,11 +115,13 @@ try {
                      AND (ta.section IS NULL OR s.section = ta.section)) as total_students,
                     sc.is_active,
                     CASE WHEN tl.id IS NOT NULL AND tl.is_active = TRUE THEN TRUE ELSE FALSE END as session_started,
+                    CASE WHEN tl_ended.id IS NOT NULL AND DATE(tl_ended.session_end) = CURDATE() THEN TRUE ELSE FALSE END as session_ended_today,
                     tl.id as session_id
                    FROM schedules sc
                    JOIN teacher_assignments ta ON sc.assignment_id = ta.id
                    JOIN subjects sub ON ta.subject_id = sub.id
                    LEFT JOIN teacher_locations tl ON sc.id = tl.schedule_id AND tl.is_active = TRUE AND DATE(tl.session_start) = CURDATE()
+                   LEFT JOIN teacher_locations tl_ended ON sc.id = tl_ended.schedule_id AND tl_ended.is_active = FALSE AND tl_ended.session_end IS NOT NULL AND DATE(tl_ended.session_end) = CURDATE()
                    WHERE ta.teacher_id = :teacher_id
                    AND sc.day_of_week = :day_of_week
                    AND sc.is_active = TRUE
@@ -138,6 +140,7 @@ try {
         $endTime = $class['end_time'];
         $isWithinTime = ($currentTime >= $startTime && $currentTime <= $endTime);
         $sessionActive = (bool)$class['session_started'];
+        $sessionEndedToday = (bool)$class['session_ended_today'];
         
         // Capture active session
         if ($sessionActive && $activeSession === null) {
@@ -165,7 +168,7 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => !$sessionActive,
+            'is_startable' => !$sessionActive && !$sessionEndedToday,
             'is_completed' => !$isWithinTime && $currentTime > $endTime
         ];
     }, $todayClasses);
