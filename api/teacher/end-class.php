@@ -1,41 +1,4 @@
 <?php
-/**
- * Teacher End Class API
- * Ends a class session and returns attendance summary
- * Matches Android app's EndClassResponse model
- */
-
-// Capture fatal errors BEFORE any output
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false,
-        'message' => 'Server error',
-        'error' => $errstr,
-        'file' => basename($errfile),
-        'line' => $errline
-    ]);
-    exit;
-});
-
-register_shutdown_function(function() {
-    $error = error_get_last();
-    if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
-        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
-        http_response_code(500);
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'message' => 'Server error',
-            'error' => $error['message'],
-            'file' => basename($error['file']),
-            'line' => $error['line']
-        ]);
-    }
-});
-
 header('Content-Type: application/json');
 
 try {
@@ -68,22 +31,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    // Check authentication and role
     $user = Auth::user();
-    
+
     if (!$user) {
         Response::unauthorized('Please login to continue');
     }
-    
+
     if ($user['role'] !== 'teacher') {
         Response::error('Access restricted to teachers only', 403);
     }
 
-    // Get database connection
     $database = new Database();
     $db = $database->getConnection();
 
-    // Get POST data (matching EndClassRequest)
     $data = json_decode(file_get_contents('php://input'), true);
 
     $validator = new Validator();
@@ -120,7 +80,8 @@ try {
         Response::error('Session not found or not owned by you', 404);
     }
 
-    if (!$session['is_active']) {
+    // ✅ Cast to int — DB may return "0"/"1" string instead of boolean
+    if ((int)$session['is_active'] !== 1) {
         Response::error('Session already ended', 400);
     }
 
@@ -130,24 +91,29 @@ try {
     $stmt->bindParam(':session_id', $data['session_id']);
     $stmt->execute();
 
-    // Auto-mark absent students who haven't marked attendance
-    $attendanceModel = new Attendance($db);
-    $absentResult = $attendanceModel->markAbsentForEndedClass(
-        $session['schedule_id'],
-        $teacher['id'],
-        $session['department_id'],
-        $session['semester'],
-        $session['section']
-    );
+    // ✅ Wrap absent marking — don't let it crash the whole request
+    $absentResult = ['absent_marked' => 0, 'message' => ''];
+    try {
+        $attendanceModel = new Attendance($db);
+        $absentResult = $attendanceModel->markAbsentForEndedClass(
+            $session['schedule_id'],
+            $teacher['id'],
+            $session['department_id'],
+            $session['semester'],
+            $session['section']
+        );
+    } catch (Exception $absentEx) {
+        error_log('Auto-absent marking failed: ' . $absentEx->getMessage());
+        // Session already ended — don't fail the response
+    }
 
-    // Get attendance summary
     $today = date('Y-m-d');
-    
-    // Total students in the class
+
+    // ✅ Fixed: unique PDO param names — :section and :section2
     $totalQuery = "SELECT COUNT(*) as total FROM students s 
                    WHERE s.department_id = :department_id 
                    AND s.semester = :semester
-                   AND (s.section = :section OR :section2 IS NULL)";
+                   AND (:section IS NULL OR s.section = :section2)";
     $stmt = $db->prepare($totalQuery);
     $stmt->bindParam(':department_id', $session['department_id']);
     $stmt->bindParam(':semester', $session['semester']);
@@ -170,15 +136,14 @@ try {
     $absent = $totalStudents - $present;
     $percentage = $totalStudents > 0 ? round(($present / $totalStudents) * 100, 2) : 0;
 
-    // Return EndClassResponse
     Response::success([
-        'session_id' => (int)$data['session_id'],
-        'ended_at' => date('Y-m-d H:i:s'),
-        'total_students' => $totalStudents,
-        'present' => $present,
-        'absent' => $absent,
-        'auto_marked_absent' => $absentResult['absent_marked'] ?? 0,
-        'attendance_percentage' => $percentage
+        'session_id'           => (int)$data['session_id'],
+        'ended_at'             => date('Y-m-d H:i:s'),
+        'total_students'       => $totalStudents,
+        'present'              => $present,
+        'absent'               => $absent,
+        'auto_marked_absent'   => $absentResult['absent_marked'] ?? 0,
+        'attendance_percentage'=> $percentage
     ], 'Class session ended successfully. ' . ($absentResult['message'] ?? ''));
 
 } catch (Exception $e) {
@@ -187,7 +152,7 @@ try {
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $e->getMessage(),
-        'error' => $e->getMessage()
+        'error'   => $e->getMessage()
     ]);
     exit;
 }
