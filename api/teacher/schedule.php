@@ -112,6 +112,7 @@ try {
         $isToday = ($schedule['day_of_week'] === $today);
         $isWithinTime = $isToday && ($currentTime >= $startTime && $currentTime <= $endTime);
         $isPast = $isToday && $currentTime > $endTime;
+        $sessionActive = (bool)$schedule['session_active'];
         
         return [
             'schedule_id' => (int)$schedule['id'],
@@ -124,8 +125,8 @@ try {
             'semester' => (int)($schedule['semester'] ?? 1),
             'section' => $schedule['section'] ?? 'A',
             'classroom' => $schedule['classroom'],
-            'session_active' => (bool)$schedule['session_active'],
-            'is_startable' => $isWithinTime,
+            'session_active' => $sessionActive,
+            'is_startable' => !$sessionActive,
             'is_completed' => $isPast
         ];
     }, $schedules);

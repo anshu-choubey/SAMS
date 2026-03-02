@@ -165,7 +165,7 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => $isWithinTime && !$sessionActive,
+            'is_startable' => !$sessionActive,
             'is_completed' => !$isWithinTime && $currentTime > $endTime
         ];
     }, $todayClasses);
