@@ -18,8 +18,11 @@ CORS::handle();
 
 try {
     // Check authentication and role
-    Auth::hasRole('teacher');
     $user = Auth::user();
+    
+    if ($user['role'] !== 'teacher') {
+        Response::error('Access restricted to teachers only', 403);
+    }
 
     // Get database connection
     $database = new Database();
