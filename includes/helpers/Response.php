@@ -52,9 +52,19 @@ class Response {
      * Works with or without output buffering
      */
     private static function setHttpStatus($code) {
-        if (!headers_sent()) {
-            http_response_code($code);
-        }
+        $statusMessages = [
+            200 => '200 OK',
+            201 => '201 Created',
+            400 => '400 Bad Request',
+            401 => '401 Unauthorized',
+            403 => '403 Forbidden',
+            404 => '404 Not Found',
+            422 => '422 Unprocessable Entity',
+            500 => '500 Internal Server Error'
+        ];
+        
+        $statusMessage = $statusMessages[$code] ?? "$code Unknown";
+        header("HTTP/1.1 $statusMessage");
     }
      * Send forbidden response
      */

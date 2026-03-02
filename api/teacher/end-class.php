@@ -5,7 +5,7 @@ ob_start();
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     ob_end_clean();
     error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
-    http_response_code(500);
+    header('HTTP/1.1 500 Internal Server Error');
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $errstr,
@@ -19,8 +19,7 @@ register_shutdown_function(function() {
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         ob_end_clean();
         error_log("Fatal Error: " . $error['message']);
-        http_response_code(500);
-        header('Content-Type: application/json');
+        header('HTTP/1.1 500 Internal Server Error');
         echo json_encode([
             'success' => false,
             'message' => 'Server error: ' . $error['message'],
@@ -185,7 +184,7 @@ try {
 } catch (Exception $e) {
     ob_end_clean();
     error_log('End class error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
-    http_response_code(500);
+    header('HTTP/1.1 500 Internal Server Error');
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $e->getMessage(),
