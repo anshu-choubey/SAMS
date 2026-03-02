@@ -9,7 +9,7 @@ class Response {
      * Send success response
      */
     public static function success($data = [], $message = 'Success', $statusCode = 200) {
-        http_response_code($statusCode);
+        self::setHttpStatus($statusCode);
         echo json_encode([
             'success' => true,
             'message' => $message,
@@ -23,7 +23,7 @@ class Response {
      * Send error response
      */
     public static function error($message = 'An error occurred', $statusCode = 400, $errors = []) {
-        http_response_code($statusCode);
+        self::setHttpStatus($statusCode);
         echo json_encode([
             'success' => false,
             'message' => $message,
@@ -48,6 +48,14 @@ class Response {
     }
 
     /**
+     * Set HTTP status code safely
+     * Works with or without output buffering
+     */
+    private static function setHttpStatus($code) {
+        if (!headers_sent()) {
+            http_response_code($code);
+        }
+    }
      * Send forbidden response
      */
     public static function forbidden($message = 'Access forbidden') {

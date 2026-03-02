@@ -1,6 +1,6 @@
 <?php
-ob_start();
 header('Content-Type: application/json');
+ob_start();
 
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     ob_end_clean();
