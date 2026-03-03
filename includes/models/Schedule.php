@@ -116,7 +116,7 @@ class Schedule {
      */
     public function getById($id) {
         $query = "SELECT s.*, 
-                         ta.section, ta.academic_year, ta.semester, ta.teacher_id, ta.department_id,
+                         ta.section, CAST(COALESCE(LEFT(ta.academic_year, 4), YEAR(CURDATE())) AS UNSIGNED) as academic_year, ta.semester, ta.teacher_id, ta.department_id,
                          sub.name as subject_name, sub.code as subject_code,
                          d.name as department_name, d.code as department_code,
                          u.full_name as teacher_name, t.employee_id
@@ -148,7 +148,7 @@ class Schedule {
      */
     public function getAll($filters = []) {
         $query = "SELECT s.*, 
-                         ta.teacher_id, COALESCE(ta.section, '') as section, COALESCE(ta.academic_year, YEAR(CURDATE())) as academic_year, ta.semester,
+                         ta.teacher_id, COALESCE(ta.section, '') as section, CAST(COALESCE(LEFT(ta.academic_year, 4), YEAR(CURDATE())) AS UNSIGNED) as academic_year, ta.semester,
                          sub.name as subject_name, sub.code as subject_code,
                          d.name as department_name, d.code as department_code,
                          u.full_name as teacher_name, t.employee_id
