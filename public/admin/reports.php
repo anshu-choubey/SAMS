@@ -362,6 +362,13 @@ $pageTitle = 'Reports';
         function displayAttendanceReport(stats, fromDate, toDate) {
             const reportList = document.getElementById('reportList');
             
+            // Store for CSV export
+            lastReportData = {
+                type: 'attendance',
+                data: stats,
+                formData: { date_from: fromDate, date_to: toDate }
+            };
+            
             const verificationData = stats.verification_data || {
                 success: 0,
                 gps_failed: 0,
@@ -839,17 +846,34 @@ $pageTitle = 'Reports';
         }
 
         function downloadCSV(filename, csvContent) {
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            try {
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                
+                if (link.download !== undefined) {
+                    // Feature detection for download attribute
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // Clean up
+                    setTimeout(function() {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                } else {
+                    // Fallback for older browsers
+                    console.error('Download attribute is not supported');
+                    showErrorDialog('Error', 'Download is not supported in your browser');
+                }
+            } catch (error) {
+                console.error('CSV Download error:', error);
+                showErrorDialog('Error', 'Failed to download CSV: ' + error.message);
+            }
         }
 
         function downloadAttendanceReportCSV() {
