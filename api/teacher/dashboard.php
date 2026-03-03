@@ -139,6 +139,13 @@ try {
         $startTime = $class['start_time'];
         $endTime = $class['end_time'];
         $isWithinTime = ($currentTime >= $startTime && $currentTime <= $endTime);
+        
+        // ✅ FIX: Allow starting class up to 15 minutes BEFORE scheduled start time
+        $startTimeObj = DateTime::createFromFormat('H:i:s', $startTime);
+        $fifteenMinEarly = $startTimeObj->modify('-15 minutes')->format('H:i:s');
+        $isBeforeClass = ($currentTime >= $fifteenMinEarly && $currentTime < $startTime);
+        $isStartTimeWindow = $isWithinTime || $isBeforeClass;
+        
         $sessionStarted = (bool)$class['session_started'];
         $sessionEndedToday = (bool)$class['session_ended_today'];
         
@@ -173,7 +180,7 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => !$sessionStarted && $isWithinTime,  // ✅ Can start if within time and not already started
+            'is_startable' => !$sessionStarted && $isStartTimeWindow,  // ✅ Can start from 15min before to end time
             'is_completed' => !$isWithinTime && $currentTime > $endTime  // ✅ Completed if time has passed
         ];
     }, $todayClasses);
