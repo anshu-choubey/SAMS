@@ -149,10 +149,9 @@ try {
         $sessionStarted = (bool)$class['session_started'];
         $sessionEndedToday = (bool)$class['session_ended_today'];
         
-        // ✅ FIX: Mark as active if either:
-        // 1. Session has been explicitly started, OR
-        // 2. Current time is within the class schedule window
-        $sessionActive = $sessionStarted || $isWithinTime;
+        // ✅ FIX: Mark as active ONLY if session has been explicitly started by teacher
+        // Do NOT auto-start based on time - require manual action
+        $sessionActive = $sessionStarted;
         
         // Capture active session (if time is within window or session started)
         if ($sessionActive && $activeSession === null) {
