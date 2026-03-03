@@ -169,6 +169,8 @@ try {
         'subject_code' => $schedule['subject_code'],
         'semester' => (int)$schedule['semester'],
         'section' => $schedule['section'],
+        'start_time' => $schedule['start_time'],
+        'end_time' => $schedule['end_time'],
         'session_active' => $session ? (bool)$session['is_active'] : false,
         'total_students' => $totalStudents,
         'present_count' => $presentCount,
