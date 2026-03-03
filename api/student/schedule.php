@@ -134,7 +134,9 @@ try {
 
     // Return ScheduleResponse structure matching Android model
     Response::success([
-        'schedules' => $formattedSchedules
+        'data' => [
+            'schedules' => $formattedSchedules
+        ]
     ]);
 
 } catch (Exception $e) {
