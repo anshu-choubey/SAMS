@@ -139,10 +139,15 @@ try {
         $startTime = $class['start_time'];
         $endTime = $class['end_time'];
         $isWithinTime = ($currentTime >= $startTime && $currentTime <= $endTime);
-        $sessionActive = (bool)$class['session_started'];
+        $sessionStarted = (bool)$class['session_started'];
         $sessionEndedToday = (bool)$class['session_ended_today'];
         
-        // Capture active session
+        // ✅ FIX: Mark as active if either:
+        // 1. Session has been explicitly started, OR
+        // 2. Current time is within the class schedule window
+        $sessionActive = $sessionStarted || $isWithinTime;
+        
+        // Capture active session (if time is within window or session started)
         if ($sessionActive && $activeSession === null) {
             $activeSession = [
                 'session_id' => (int)($class['session_id'] ?? 0),
@@ -168,8 +173,8 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => !$sessionActive && !$sessionEndedToday,
-            'is_completed' => !$isWithinTime && $currentTime > $endTime
+            'is_startable' => !$sessionStarted && $isWithinTime,  // ✅ Can start if within time and not already started
+            'is_completed' => !$isWithinTime && $currentTime > $endTime  // ✅ Completed if time has passed
         ];
     }, $todayClasses);
     
