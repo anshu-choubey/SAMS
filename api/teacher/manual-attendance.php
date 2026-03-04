@@ -115,18 +115,24 @@ try {
         Response::error('Assignment is currently inactive', 403);
     }
 
-    // Verify student exists and is in the class
+    // Verify student exists and is in the class (dynamic query to avoid PDO parameter issues)
     $studentQuery = "SELECT s.* FROM students s 
                      WHERE s.id = :student_id 
                      AND s.department_id = :department_id 
-                     AND s.semester = :semester 
-                     AND (s.section = :section OR :section2 IS NULL)";
+                     AND s.semester = :semester";
+    
+    // Only filter by section if section is provided
+    if (!empty($schedule['section'])) {
+        $studentQuery .= " AND s.section = :section";
+    }
+    
     $stmt = $db->prepare($studentQuery);
     $stmt->bindParam(':student_id', $studentId);
     $stmt->bindParam(':department_id', $schedule['department_id']);
     $stmt->bindParam(':semester', $schedule['semester']);
-    $stmt->bindParam(':section', $schedule['section']);
-    $stmt->bindParam(':section2', $schedule['section']);
+    if (!empty($schedule['section'])) {
+        $stmt->bindParam(':section', $schedule['section']);
+    }
     $stmt->execute();
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
 

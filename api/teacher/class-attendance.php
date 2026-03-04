@@ -133,19 +133,25 @@ try {
         'is_active' => $session ? (bool)$session['is_active'] : false
     ];
 
-    // Get all students in the class
+    // Get all students in the class (dynamic query to avoid PDO parameter issues)
     $studentsQuery = "SELECT s.id as student_id, s.roll_number, u.full_name
                       FROM students s
                       JOIN users u ON s.user_id = u.id
                       WHERE s.department_id = :department_id
-                      AND s.semester = :semester
-                      AND (s.section = :section OR :section2 IS NULL)
-                      ORDER BY s.roll_number";
+                      AND s.semester = :semester";
+    
+    // Only filter by section if section is provided
+    if (!empty($schedule['section'])) {
+        $studentsQuery .= " AND s.section = :section";
+    }
+    
+    $studentsQuery .= " ORDER BY s.roll_number";
     $stmt = $db->prepare($studentsQuery);
     $stmt->bindParam(':department_id', $schedule['department_id']);
     $stmt->bindParam(':semester', $schedule['semester']);
-    $stmt->bindParam(':section', $schedule['section']);
-    $stmt->bindParam(':section2', $schedule['section']);
+    if (!empty($schedule['section'])) {
+        $stmt->bindParam(':section', $schedule['section']);
+    }
     $stmt->execute();
     $allStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
