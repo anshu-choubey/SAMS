@@ -373,17 +373,23 @@ class Attendance {
     public function markAbsentForEndedClass($scheduleId, $teacherId, $departmentId, $semester, $section = null) {
         $today = date('Y-m-d');
         
-        // Get all students in the class
+        // Get all students in the class (dynamic query to avoid PDO parameter issues)
         $studentsQuery = "SELECT s.id as student_id, s.user_id 
                          FROM students s 
                          WHERE s.department_id = :department_id 
-                         AND s.semester = :semester
-                         AND (s.section = :section OR :section IS NULL OR :section = '')";
+                         AND s.semester = :semester";
+        
+        // Only filter by section if section is provided
+        if (!empty($section)) {
+            $studentsQuery .= " AND s.section = :section";
+        }
         
         $stmt = $this->conn->prepare($studentsQuery);
         $stmt->bindParam(':department_id', $departmentId);
         $stmt->bindParam(':semester', $semester);
-        $stmt->bindParam(':section', $section);
+        if (!empty($section)) {
+            $stmt->bindParam(':section', $section);
+        }
         $stmt->execute();
         
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
