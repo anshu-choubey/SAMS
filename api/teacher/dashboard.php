@@ -100,7 +100,7 @@ try {
     $avgAttendance = (float)($stmt->fetch(PDO::FETCH_ASSOC)['avg_attendance'] ?? 0);
 
     // Get today's classes
-    $todayQuery = "SELECT 
+    $todayQuery = "SELECT DISTINCT
                     sc.id,
                     sub.id as subject_id,
                     sub.name as subject_name,
@@ -114,14 +114,12 @@ try {
                     (SELECT COUNT(*) FROM students s WHERE s.department_id = ta.department_id AND s.semester = ta.semester 
                      AND (ta.section IS NULL OR s.section = ta.section)) as total_students,
                     sc.is_active,
-                    CASE WHEN tl.id IS NOT NULL AND tl.is_active = TRUE THEN TRUE ELSE FALSE END as session_started,
-                    CASE WHEN tl_ended.id IS NOT NULL AND DATE(tl_ended.session_end) = CURDATE() THEN TRUE ELSE FALSE END as session_ended_today,
-                    tl.id as session_id
+                    CASE WHEN EXISTS (SELECT 1 FROM teacher_locations tl WHERE tl.schedule_id = sc.id AND tl.is_active = TRUE AND DATE(tl.session_start) = CURDATE()) THEN TRUE ELSE FALSE END as session_started,
+                    CASE WHEN EXISTS (SELECT 1 FROM teacher_locations tl_ended WHERE tl_ended.schedule_id = sc.id AND tl_ended.is_active = FALSE AND tl_ended.session_end IS NOT NULL AND DATE(tl_ended.session_end) = CURDATE()) THEN TRUE ELSE FALSE END as session_ended_today,
+                    (SELECT id FROM teacher_locations WHERE schedule_id = sc.id AND is_active = TRUE AND DATE(session_start) = CURDATE() LIMIT 1) as session_id
                    FROM schedules sc
                    JOIN teacher_assignments ta ON sc.assignment_id = ta.id
                    JOIN subjects sub ON ta.subject_id = sub.id
-                   LEFT JOIN teacher_locations tl ON sc.id = tl.schedule_id AND tl.is_active = TRUE AND DATE(tl.session_start) = CURDATE()
-                   LEFT JOIN teacher_locations tl_ended ON sc.id = tl_ended.schedule_id AND tl_ended.is_active = FALSE AND tl_ended.session_end IS NOT NULL AND DATE(tl_ended.session_end) = CURDATE()
                    WHERE ta.teacher_id = :teacher_id
                    AND sc.day_of_week = :day_of_week
                    AND sc.is_active = TRUE
