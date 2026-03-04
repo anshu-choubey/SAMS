@@ -80,14 +80,19 @@ try {
         Response::error('Schedule not found or inactive', 404);
     }
 
+    // Check if schedule has an assignment
+    if (!$schedule['assignment_id']) {
+        Response::error('Schedule has no assignment configured', 404);
+    }
+
     // Verify teacher ownership
-    if (!$schedule['assignment_id'] || $schedule['teacher_id'] !== $teacher['id']) {
-        Response::error('Schedule not assigned to you', 403);
+    if (!$schedule['teacher_id'] || $schedule['teacher_id'] != $teacher['id']) {
+        Response::error('This schedule is not assigned to you', 403);
     }
 
     // Check if assignment is active
-    if (!$schedule['assignment_active']) {
-        Response::error('Assignment is inactive', 403);
+    if ((int)$schedule['assignment_active'] !== 1) {
+        Response::error('Assignment is currently inactive', 403);
     }
 
     // Check if session already started
