@@ -464,7 +464,7 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
 ('gps_proximity_radius', '50', 'number', 'GPS proximity radius in meters', FALSE),
 ('face_confidence_threshold', '75', 'number', 'Minimum face confidence score percentage', FALSE),
 ('attendance_warning_threshold', '75', 'number', 'Attendance percentage below which warning is triggered', FALSE),
-('session_lifetime', '3600', 'number', 'Session lifetime in seconds', FALSE),
+('session_lifetime', '604800', 'number', 'Session lifetime in seconds', FALSE),
 ('max_login_attempts', '5', 'number', 'Maximum failed login attempts before lockout', FALSE),
 ('lockout_duration', '900', 'number', 'Account lockout duration in seconds', FALSE),
 ('fcm_server_key', '', 'string', 'Firebase Cloud Messaging server key', FALSE),

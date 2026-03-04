@@ -1,38 +1,34 @@
 <?php
-// Output buffering to capture all output
-ob_start();
-
-// Inline CORS headers
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Max-Age: 86400');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    ob_end_flush();
-    exit;
-}
+/**
+ * Teacher End Class API
+ * Ends a class session and returns attendance summary
+ * Matches Android app's EndClassResponse model
+ */
 
 header('Content-Type: application/json');
 
-// Error handler to catch PHP warnings/notices
+// Capture fatal errors
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
-    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+    error_log("PHP Error [$errno]: $errstr in $errfile:$errline");
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error',
+        'error' => $errstr,
+        'file' => basename($errfile),
+        'line' => $errline
+    ]);
+    exit;
 });
 
-// Shutdown function to catch fatal errors
 register_shutdown_function(function() {
     $error = error_get_last();
-    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-        while (ob_get_level() > 0) ob_end_clean();
-        error_log("Fatal Error in end-class.php: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
         http_response_code(500);
-        header('Content-Type: application/json');
-        header('Access-Control-Allow-Origin: *');
         echo json_encode([
             'success' => false,
-            'message' => 'Fatal server error',
+            'message' => 'Server error',
             'error' => $error['message'],
             'file' => basename($error['file']),
             'line' => $error['line']
@@ -43,57 +39,59 @@ register_shutdown_function(function() {
 try {
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../config/constants.php';
+    require_once __DIR__ . '/../../includes/middleware/CORS.php';
     require_once __DIR__ . '/../../includes/middleware/Auth.php';
     require_once __DIR__ . '/../../includes/helpers/Response.php';
     require_once __DIR__ . '/../../includes/helpers/Validator.php';
     require_once __DIR__ . '/../../includes/models/Attendance.php';
-} catch (\Throwable $e) {
-    ob_end_clean();
-    error_log("Include error in end-class.php: " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Include error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Server error - could not load required files',
-        'error' => $e->getMessage(),
-        'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'error' => $e->getMessage()
     ]);
     exit;
 }
 
+// Handle CORS
+CORS::handle();
+
+// Only POST method allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    ob_end_clean();
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);
     exit;
 }
 
 try {
+    // Check authentication and role
     $user = Auth::user();
-
+    
     if (!$user) {
-        ob_end_clean();
         Response::unauthorized('Please login to continue');
     }
-
+    
     if ($user['role'] !== 'teacher') {
-        ob_end_clean();
         Response::error('Access restricted to teachers only', 403);
     }
 
+    // Get database connection
     $database = new Database();
     $db = $database->getConnection();
 
+    // Get POST data (matching EndClassRequest)
     $data = json_decode(file_get_contents('php://input'), true);
 
     $validator = new Validator();
     $validator->required('session_id', $data['session_id'] ?? '', 'Session ID');
 
     if ($validator->hasErrors()) {
-        ob_end_clean();
         Response::validationError($validator->getErrors());
     }
 
+    // Get teacher profile
     $teacherQuery = "SELECT t.* FROM teachers t WHERE t.user_id = :user_id";
     $stmt = $db->prepare($teacherQuery);
     $stmt->bindParam(':user_id', $user['id']);
@@ -101,14 +99,15 @@ try {
     $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$teacher) {
-        ob_end_clean();
         Response::error('Teacher profile not found', 404);
     }
 
-    $sessionQuery = "SELECT tl.*, sc.assignment_id, ta.department_id, ta.semester, ta.section
+    // Get session and verify ownership
+    // Use LEFT JOINs for better error handling
+    $sessionQuery = "SELECT tl.*, sc.assignment_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active
                      FROM teacher_locations tl
-                     JOIN schedules sc ON tl.schedule_id = sc.id
-                     JOIN teacher_assignments ta ON sc.assignment_id = ta.id
+                     LEFT JOIN schedules sc ON tl.schedule_id = sc.id
+                     LEFT JOIN teacher_assignments ta ON sc.assignment_id = ta.id
                      WHERE tl.id = :session_id AND tl.teacher_id = :teacher_id";
     $stmt = $db->prepare($sessionQuery);
     $stmt->bindParam(':session_id', $data['session_id']);
@@ -117,40 +116,42 @@ try {
     $session = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$session) {
-        ob_end_clean();
         Response::error('Session not found or not owned by you', 404);
     }
 
-    if ((int)$session['is_active'] !== 1) {
-        ob_end_clean();
+    // Verify schedule exists
+    if (!$session['assignment_id']) {
+        Response::error('Session schedule not found', 404);
+    }
+
+    if (!$session['is_active']) {
         Response::error('Session already ended', 400);
     }
 
+    // End the session
     $updateQuery = "UPDATE teacher_locations SET is_active = FALSE, session_end = NOW() WHERE id = :session_id";
     $stmt = $db->prepare($updateQuery);
     $stmt->bindParam(':session_id', $data['session_id']);
     $stmt->execute();
 
-    $absentResult = ['absent_marked' => 0, 'message' => ''];
-    try {
-        $attendanceModel = new Attendance($db);
-        $absentResult = $attendanceModel->markAbsentForEndedClass(
-            $session['schedule_id'],
-            $teacher['id'],
-            $session['department_id'],
-            $session['semester'],
-            $session['section']
-        );
-    } catch (\Throwable $absentEx) {
-        error_log('Auto-absent marking failed: ' . $absentEx->getMessage());
-    }
+    // Auto-mark absent students who haven't marked attendance
+    $attendanceModel = new Attendance($db);
+    $absentResult = $attendanceModel->markAbsentForEndedClass(
+        $session['schedule_id'],
+        $teacher['id'],
+        $session['department_id'],
+        $session['semester'],
+        $session['section']
+    );
 
+    // Get attendance summary
     $today = date('Y-m-d');
-
-    $totalQuery = "SELECT COUNT(*) as total FROM students s
-                   WHERE s.department_id = :department_id
+    
+    // Total students in the class
+    $totalQuery = "SELECT COUNT(*) as total FROM students s 
+                   WHERE s.department_id = :department_id 
                    AND s.semester = :semester
-                   AND (:section IS NULL OR s.section = :section2)";
+                   AND (s.section = :section OR :section2 IS NULL)";
     $stmt = $db->prepare($totalQuery);
     $stmt->bindParam(':department_id', $session['department_id']);
     $stmt->bindParam(':semester', $session['semester']);
@@ -159,9 +160,10 @@ try {
     $stmt->execute();
     $totalStudents = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    $presentQuery = "SELECT COUNT(*) as present FROM attendance a
-                     WHERE a.schedule_id = :schedule_id
-                     AND a.attendance_date = :date
+    // Present students
+    $presentQuery = "SELECT COUNT(*) as present FROM attendance a 
+                     WHERE a.schedule_id = :schedule_id 
+                     AND a.attendance_date = :date 
                      AND a.status = 'present'";
     $stmt = $db->prepare($presentQuery);
     $stmt->bindParam(':schedule_id', $session['schedule_id']);
@@ -172,27 +174,24 @@ try {
     $absent = $totalStudents - $present;
     $percentage = $totalStudents > 0 ? round(($present / $totalStudents) * 100, 2) : 0;
 
-    ob_end_clean();
+    // Return EndClassResponse
     Response::success([
-        'session_id'            => (int)$data['session_id'],
-        'ended_at'              => date('Y-m-d H:i:s'),
-        'total_students'        => $totalStudents,
-        'present'               => $present,
-        'absent'                => $absent,
-        'auto_marked_absent'    => $absentResult['absent_marked'] ?? 0,
+        'session_id' => (int)$data['session_id'],
+        'ended_at' => date('Y-m-d H:i:s'),
+        'total_students' => $totalStudents,
+        'present' => $present,
+        'absent' => $absent,
+        'auto_marked_absent' => $absentResult['absent_marked'] ?? 0,
         'attendance_percentage' => $percentage
     ], 'Class session ended successfully. ' . ($absentResult['message'] ?? ''));
 
-} catch (\Throwable $e) {
-    while (ob_get_level() > 0) ob_end_clean();
-    error_log('End class error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+} catch (Exception $e) {
+    error_log('End class error: ' . $e->getMessage() . ' - ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => 'Server error: ' . $e->getMessage(),
-        'error'   => $e->getMessage(),
-        'file'    => basename($e->getFile()),
-        'line'    => $e->getLine()
+        'error' => $e->getMessage()
     ]);
     exit;
 }

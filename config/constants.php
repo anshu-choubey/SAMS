@@ -13,7 +13,7 @@ define('BASE_URL', getenv('BASE_URL') ?: 'http://localhost/sams-backend/');
 define('API_URL', BASE_URL . 'api/');
 
 // Security
-define('SESSION_LIFETIME', 3600); // 1 hour
+define('SESSION_LIFETIME', 604800); // 7 days
 define('PASSWORD_MIN_LENGTH', 8);
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOCKOUT_TIME', 900); // 15 minutes

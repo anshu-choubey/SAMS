@@ -66,18 +66,28 @@ try {
     }
 
     // Verify schedule belongs to this teacher
-    $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section
+    // Use LEFT JOINs for better error handling
+    $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active
                       FROM schedules sc
-                      JOIN teacher_assignments ta ON sc.assignment_id = ta.id
-                      WHERE sc.id = :schedule_id AND ta.teacher_id = :teacher_id AND sc.is_active = TRUE";
+                      LEFT JOIN teacher_assignments ta ON sc.assignment_id = ta.id
+                      WHERE sc.id = :schedule_id AND sc.is_active = TRUE";
     $stmt = $db->prepare($scheduleQuery);
     $stmt->bindParam(':schedule_id', $data['schedule_id']);
-    $stmt->bindParam(':teacher_id', $teacher['id']);
     $stmt->execute();
     $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$schedule) {
-        Response::error('Schedule not found or not assigned to you', 404);
+        Response::error('Schedule not found or inactive', 404);
+    }
+
+    // Verify teacher ownership
+    if (!$schedule['assignment_id'] || $schedule['teacher_id'] !== $teacher['id']) {
+        Response::error('Schedule not assigned to you', 403);
+    }
+
+    // Check if assignment is active
+    if (!$schedule['assignment_active']) {
+        Response::error('Assignment is inactive', 403);
     }
 
     // Check if session already started

@@ -179,7 +179,7 @@ class SettingsHelper {
      */
     public static function getSystemSettings() {
         return [
-            'session_lifetime' => self::get('session_lifetime', 3600),
+            'session_lifetime' => self::get('session_lifetime', 604800),
             'max_login_attempts' => self::get('max_login_attempts', 5),
             'lockout_duration' => self::get('lockout_duration', 900),
             'maintenance_mode' => self::get('maintenance_mode', false),
@@ -195,7 +195,7 @@ class SettingsHelper {
         return [
             'attendance' => self::getAttendanceSettings(),
             'system' => [
-                'session_timeout' => self::get('session_lifetime', 3600),
+                'session_timeout' => self::get('session_lifetime', 604800),
                 'academic_year' => self::get('academic_year', '2025-26'),
                 'current_semester' => self::get('current_semester', 2)
             ],

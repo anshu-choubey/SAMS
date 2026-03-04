@@ -59,20 +59,40 @@ try {
     }
 
     // Get schedule info and verify ownership
-    $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.department_id, ta.semester, ta.section,
-                             sub.name as subject_name, sub.code as subject_code
+    // Use LEFT JOINs to provide better error messages
+    $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active,
+                             sub.name as subject_name, sub.code as subject_code, sub.id as subject_id
                       FROM schedules sc
-                      JOIN teacher_assignments ta ON sc.assignment_id = ta.id
-                      JOIN subjects sub ON ta.subject_id = sub.id
-                      WHERE sc.id = :schedule_id AND ta.teacher_id = :teacher_id";
+                      LEFT JOIN teacher_assignments ta ON sc.assignment_id = ta.id
+                      LEFT JOIN subjects sub ON ta.subject_id = sub.id
+                      WHERE sc.id = :schedule_id";
     $stmt = $db->prepare($scheduleQuery);
     $stmt->bindParam(':schedule_id', $scheduleId);
-    $stmt->bindParam(':teacher_id', $teacher['id']);
     $stmt->execute();
     $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$schedule) {
-        Response::error('Schedule not found or not assigned to you', 404);
+        Response::error('Schedule not found', 404);
+    }
+
+    // Verify teacher ownership - check if assignment_id exists and teacher matches
+    if (!$schedule['assignment_id'] || $schedule['teacher_id'] !== $teacher['id']) {
+        Response::error('Schedule not assigned to you', 403);
+    }
+
+    // Check if assignment is active
+    if (!$schedule['assignment_active']) {
+        Response::error('Assignment is inactive', 403);
+    }
+
+    // Check if subject exists
+    if (!$schedule['subject_id']) {
+        Response::error('Subject not found for this schedule', 404);
+    }
+
+    // Validate required schedule fields
+    if (!$schedule['department_id'] || !$schedule['semester']) {
+        Response::error('Incomplete schedule configuration', 500);
     }
 
     // Get active session for this schedule if any

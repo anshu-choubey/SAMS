@@ -113,6 +113,7 @@ heroku config:set \
   APP_DEBUG="false" \
   APP_URL="$APP_URL" \
   LOG_LEVEL="error" \
+  SESSION_LIFETIME="604800" \
   --app $APP_NAME
 
 echo -e "${GREEN}✓ Environment variables set${NC}\n"
@@ -200,10 +201,16 @@ echo -e "  ${BLUE}Plan:${NC}            Free/Eco (upgrade for production)\n"
 
 echo -e "📝 Next Steps:"
 echo -e "  1. Test the API: curl $APP_URL/api/health-check.php"
-echo -e "  2. Configure Firebase Server Key: heroku config:set FIREBASE_SERVER_KEY=your-key"
-echo -e "  3. Monitor logs: heroku logs --tail --app $APP_NAME"
-echo -e "  4. Set custom domain: heroku domains:add yourdomain.com --app $APP_NAME"
-echo -e "  5. Set up auto-deployment from GitHub\n"
+echo -e "  2. Create admin user: heroku run 'php setup-database.php' --app $APP_NAME"
+echo -e "  3. Configure Firebase Server Key: heroku config:set FIREBASE_SERVER_KEY=your-key"
+echo -e "  4. Monitor logs: heroku logs --tail --app $APP_NAME"
+echo -e "  5. Set custom domain: heroku domains:add yourdomain.com --app $APP_NAME"
+echo -e "  6. Set up auto-deployment from GitHub\n"
+
+echo -e "📋 Updated Features:"
+echo -e "  ✓ Session timeout: 7 days (604800 seconds)"
+echo -e "  ✓ Improved error handling for schedule queries"
+echo -e "  ✓ Better teacher authorization checks\n"
 
 echo -e "🔧 Useful Commands:"
 echo -e "  View logs:          heroku logs --tail --app $APP_NAME"
