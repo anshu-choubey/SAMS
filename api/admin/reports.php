@@ -175,15 +175,15 @@ function getDepartmentReport($db, $fromDate, $toDate) {
                 d.id,
                 d.code,
                 d.name as department_name,
-                COUNT(DISTINCT a.student_id) as total_students,
-                COUNT(*) as total_classes,
+                COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.student_id END) as total_students,
+                COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.id END) as total_classes,
                 SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
-                ROUND((SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0)) * 100, 2) as avg_attendance
+                ROUND((SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / NULLIF(COUNT(CASE WHEN a.id IS NOT NULL THEN 1 END), 0)) * 100, 2) as avg_attendance
               FROM departments d
               LEFT JOIN attendance a ON d.id = a.department_id 
                   AND a.attendance_date BETWEEN :from_date AND :to_date
               GROUP BY d.id, d.code, d.name
-              ORDER BY avg_attendance DESC";
+              ORDER BY COALESCE(avg_attendance, 0) DESC";
     
     $stmt = $db->prepare($query);
     $stmt->bindParam(':from_date', $fromDate);
@@ -193,9 +193,9 @@ function getDepartmentReport($db, $fromDate, $toDate) {
     
     // Ensure numeric values
     foreach ($result as &$row) {
-        $row['total_students'] = (int)$row['total_students'];
-        $row['total_classes'] = (int)$row['total_classes'];
-        $row['total_present'] = (int)$row['total_present'];
+        $row['total_students'] = (int)($row['total_students'] ?? 0);
+        $row['total_classes'] = (int)($row['total_classes'] ?? 0);
+        $row['total_present'] = (int)($row['total_present'] ?? 0);
         $row['avg_attendance'] = (float)($row['avg_attendance'] ?? 0);
     }
     
@@ -223,7 +223,7 @@ function getStudentReport($db, $fromDate, $toDate, $departmentId = null) {
         $query .= " AND s.department_id = :department_id";
     }
     
-    $query .= " GROUP BY s.id, s.roll_number, u.full_name, u.email, d.name ORDER BY percentage DESC";
+    $query .= " GROUP BY s.id, s.roll_number, u.full_name, u.email, d.name ORDER BY COALESCE(percentage, 0) DESC";
     
     $stmt = $db->prepare($query);
     $stmt->bindParam(':from_date', $fromDate);
@@ -239,8 +239,8 @@ function getStudentReport($db, $fromDate, $toDate, $departmentId = null) {
     // Ensure numeric values
     foreach ($result as &$row) {
         $row['student_id'] = (int)$row['student_id'];
-        $row['total_classes'] = (int)$row['total_classes'];
-        $row['attended'] = (int)$row['attended'];
+        $row['total_classes'] = (int)($row['total_classes'] ?? 0);
+        $row['attended'] = (int)($row['attended'] ?? 0);
         $row['percentage'] = (float)($row['percentage'] ?? 0);
     }
     
@@ -264,7 +264,7 @@ function getLowAttendanceStudents($db, $threshold) {
               WHERE u.is_active = TRUE
               GROUP BY s.id, s.roll_number, u.full_name, u.email, d.name
               HAVING COALESCE(percentage, 0) < :threshold
-              ORDER BY percentage ASC";
+              ORDER BY COALESCE(percentage, 0) ASC";
     
     $stmt = $db->prepare($query);
     $stmt->bindParam(':threshold', $threshold, PDO::PARAM_INT);
@@ -274,8 +274,8 @@ function getLowAttendanceStudents($db, $threshold) {
     // Ensure numeric values
     foreach ($result as &$row) {
         $row['student_id'] = (int)$row['student_id'];
-        $row['total_classes'] = (int)$row['total_classes'];
-        $row['attended'] = (int)$row['attended'];
+        $row['total_classes'] = (int)($row['total_classes'] ?? 0);
+        $row['attended'] = (int)($row['attended'] ?? 0);
         $row['percentage'] = (float)($row['percentage'] ?? 0);
     }
     
