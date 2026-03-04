@@ -38,7 +38,7 @@ try {
             case 'system':
                 // System configuration for app
                 $settings = [
-                    'session_timeout' => SettingsHelper::get('session_lifetime', 3600),
+                    'session_timeout' => SettingsHelper::get('session_lifetime', 604800),
                     'academic_year' => SettingsHelper::get('academic_year', '2025-26'),
                     'current_semester' => SettingsHelper::get('current_semester', 2),
                     'maintenance_mode' => SettingsHelper::get('maintenance_mode', false)
@@ -72,7 +72,7 @@ try {
                         'late_threshold_minutes' => SettingsHelper::get('late_threshold_minutes', 15)
                     ],
                     'system' => [
-                        'session_timeout' => SettingsHelper::get('session_lifetime', 3600),
+                        'session_timeout' => SettingsHelper::get('session_lifetime', 604800),
                         'academic_year' => SettingsHelper::get('academic_year', '2025-26'),
                         'current_semester' => SettingsHelper::get('current_semester', 2),
                         'maintenance_mode' => SettingsHelper::get('maintenance_mode', false)
@@ -92,6 +92,13 @@ try {
 
 } catch (Exception $e) {
     error_log("Settings API Error: " . $e->getMessage());
-    Response::error('Failed to retrieve settings: ' . $e->getMessage(), 500);
+    error_log("Stack trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Failed to retrieve settings',
+        'error' => $e->getMessage(),
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
 }
 ?>
