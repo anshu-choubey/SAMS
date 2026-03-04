@@ -66,7 +66,31 @@ try {
     }
 
     // Verify schedule belongs to this teacher
-    // Use LEFT JOINs for better error handling
+    // First verify teacher is assigned to this schedule with explicit INNER JOIN
+    $authQuery = "SELECT ta.id as assignment_id FROM schedules sc
+                  JOIN teacher_assignments ta ON sc.assignment_id = ta.id
+                  WHERE sc.id = :schedule_id AND ta.teacher_id = :teacher_id AND sc.is_active = TRUE
+                  LIMIT 1";
+    $stmt = $db->prepare($authQuery);
+    $stmt->bindParam(':schedule_id', $data['schedule_id']);
+    $stmt->bindParam(':teacher_id', $teacher['id']);
+    $stmt->execute();
+    $authorization = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$authorization) {
+        // Check if schedule exists at all
+        $checkSchedule = "SELECT id FROM schedules WHERE id = :schedule_id LIMIT 1";
+        $stmt = $db->prepare($checkSchedule);
+        $stmt->bindParam(':schedule_id', $data['schedule_id']);
+        $stmt->execute();
+        if (!$stmt->fetch()) {
+            Response::error('Schedule not found', 404);
+        }
+        // Schedule exists but not assigned to this teacher
+        Response::error('This schedule is not assigned to you', 403);
+    }
+
+    // Now get full schedule details
     $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active
                       FROM schedules sc
                       LEFT JOIN teacher_assignments ta ON sc.assignment_id = ta.id
@@ -78,16 +102,6 @@ try {
 
     if (!$schedule) {
         Response::error('Schedule not found or inactive', 404);
-    }
-
-    // Check if schedule has an assignment
-    if (!$schedule['assignment_id']) {
-        Response::error('Schedule has no assignment configured', 404);
-    }
-
-    // Verify teacher ownership
-    if (!$schedule['teacher_id'] || $schedule['teacher_id'] != $teacher['id']) {
-        Response::error('This schedule is not assigned to you', 403);
     }
 
     // Check if assignment is active

@@ -59,7 +59,31 @@ try {
     }
 
     // Get schedule info and verify ownership
-    // Use LEFT JOINs to provide better error messages
+    // First verify teacher is assigned to this schedule
+    $authQuery = "SELECT ta.id as assignment_id FROM schedules sc
+                  JOIN teacher_assignments ta ON sc.assignment_id = ta.id
+                  WHERE sc.id = :schedule_id AND ta.teacher_id = :teacher_id
+                  LIMIT 1";
+    $stmt = $db->prepare($authQuery);
+    $stmt->bindParam(':schedule_id', $scheduleId);
+    $stmt->bindParam(':teacher_id', $teacher['id']);
+    $stmt->execute();
+    $authorization = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$authorization) {
+        // Check if schedule exists at all
+        $checkSchedule = "SELECT id FROM schedules WHERE id = :schedule_id LIMIT 1";
+        $stmt = $db->prepare($checkSchedule);
+        $stmt->bindParam(':schedule_id', $scheduleId);
+        $stmt->execute();
+        if (!$stmt->fetch()) {
+            Response::error('Schedule not found', 404);
+        }
+        // Schedule exists but not assigned to this teacher
+        Response::error('This schedule is not assigned to you', 403);
+    }
+
+    // Now get full schedule details with soft joins
     $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active,
                              sub.name as subject_name, sub.code as subject_code, sub.id as subject_id
                       FROM schedules sc
@@ -70,20 +94,6 @@ try {
     $stmt->bindParam(':schedule_id', $scheduleId);
     $stmt->execute();
     $schedule = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$schedule) {
-        Response::error('Schedule not found', 404);
-    }
-
-    // Check if schedule has an assignment
-    if (!$schedule['assignment_id']) {
-        Response::error('Schedule has no assignment configured', 404);
-    }
-
-    // Verify teacher ownership
-    if (!$schedule['teacher_id'] || $schedule['teacher_id'] != $teacher['id']) {
-        Response::error('This schedule is not assigned to you', 403);
-    }
 
     // Check if assignment is active
     if ((int)$schedule['assignment_active'] !== 1) {
