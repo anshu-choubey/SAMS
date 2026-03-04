@@ -177,8 +177,8 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => !$sessionStarted && $isStartTimeWindow,  // ✅ Can start from 15min before to end time
-            'is_completed' => !$isWithinTime && $currentTime > $endTime  // ✅ Completed if time has passed
+            'is_startable' => !$sessionStarted && !$sessionEndedToday && $isStartTimeWindow,  // ✅ Can start if not already started and not already ended
+            'is_completed' => $sessionEndedToday || (!$isWithinTime && $currentTime > $endTime)  // ✅ Completed if teacher ended it or time has passed
         ];
     }, $todayClasses);
     
