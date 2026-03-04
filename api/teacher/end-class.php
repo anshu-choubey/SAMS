@@ -147,19 +147,24 @@ try {
     // Get attendance summary
     $today = date('Y-m-d');
     
-    // Total students in the class
+    // Total students in the class (dynamic query to avoid PDO parameter issues)
     $totalQuery = "SELECT COUNT(*) as total FROM students s 
                    WHERE s.department_id = :department_id 
-                   AND s.semester = :semester
-                   AND (s.section = :section OR :section2 IS NULL)";
+                   AND s.semester = :semester";
+    
+    // Only filter by section if section is provided
+    if (!empty($session['section'])) {
+        $totalQuery .= " AND s.section = :section";
+    }
+    
     $stmt = $db->prepare($totalQuery);
     $stmt->bindParam(':department_id', $session['department_id']);
     $stmt->bindParam(':semester', $session['semester']);
-    $stmt->bindParam(':section', $session['section']);
-    $stmt->bindParam(':section2', $session['section']);
+    if (!empty($session['section'])) {
+        $stmt->bindParam(':section', $session['section']);
+    }
     $stmt->execute();
     $totalStudents = (int)$stmt->fetch(PDO::FETCH_ASSOC)['total'];
-
     // Present students
     $presentQuery = "SELECT COUNT(*) as present FROM attendance a 
                      WHERE a.schedule_id = :schedule_id 
