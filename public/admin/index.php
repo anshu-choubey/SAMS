@@ -55,14 +55,14 @@ if ($db) {
         $weeklyAttendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Department-wise attendance
-        $stmt = $db->query("SELECT d.name, d.code,
+        $stmt = $db->query("SELECT d.id, d.name, d.code,
             COUNT(DISTINCT a.student_id) as students,
-            SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present
+            SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present,
+            COUNT(DISTINCT a.id) as total_records
             FROM departments d
-            LEFT JOIN users u ON u.department_id = d.id AND u.role = 'student'
-            LEFT JOIN attendance a ON a.student_id = u.id AND a.attendance_date = CURDATE()
+            LEFT JOIN attendance a ON d.id = a.department_id AND a.attendance_date = CURDATE()
             WHERE d.is_active = true
-            GROUP BY d.id
+            GROUP BY d.id, d.name, d.code
             ORDER BY d.name");
         $departmentStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
