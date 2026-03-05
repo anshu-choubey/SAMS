@@ -13,6 +13,7 @@ require_once __DIR__ . '/../../includes/models/User.php';
 require_once __DIR__ . '/../../includes/models/Student.php';
 require_once __DIR__ . '/../../includes/models/Teacher.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
+require_once __DIR__ . '/../../includes/helpers/Email.php';
 
 // Handle CORS
 CORS::handle();
@@ -171,6 +172,14 @@ try {
                     continue;
                 }
             }
+
+            // Send password email to newly created user
+            Email::sendUserPasswordEmail(
+                $userData['email'],
+                $userData['full_name'],
+                $userData['password'],
+                $userData['role']
+            );
 
             $inserted++;
         }

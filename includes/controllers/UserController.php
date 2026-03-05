@@ -9,6 +9,7 @@ require_once __DIR__ . '/../models/Student.php';
 require_once __DIR__ . '/../models/Teacher.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Validator.php';
+require_once __DIR__ . '/../helpers/Email.php';
 
 class UserController {
     private $db;
@@ -87,11 +88,20 @@ class UserController {
 
             $this->db->commit();
 
+            // Send password email to newly created user
+            $emailSent = Email::sendUserPasswordEmail(
+                $data['email'],
+                $data['full_name'],
+                $data['password'],
+                $data['role']
+            );
+
             Response::success([
                 'user_id' => $userId,
                 'email' => $data['email'],
-                'role' => $data['role']
-            ], 'User created successfully', 201);
+                'role' => $data['role'],
+                'password_email_sent' => $emailSent
+            ], 'User created successfully. Password sent to email.', 201);
 
         } catch (Exception $e) {
             $this->db->rollBack();
