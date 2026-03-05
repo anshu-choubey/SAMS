@@ -35,6 +35,13 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
+    // Get face confidence threshold from settings
+    $settingsQuery = "SELECT `value` FROM system_settings WHERE `key` = 'face_confidence_threshold' LIMIT 1";
+    $settingsStmt = $db->prepare($settingsQuery);
+    $settingsStmt->execute();
+    $settingsResult = $settingsStmt->fetch(PDO::FETCH_ASSOC);
+    $faceConfidenceThreshold = $settingsResult ? intval($settingsResult['value']) : 85;
+
     // Get POST data
     $data = json_decode(file_get_contents('php://input'), true);
 
@@ -48,16 +55,15 @@ try {
     $validator->numeric('latitude', $data['latitude'] ?? '', 'Latitude');
     $validator->numeric('longitude', $data['longitude'] ?? '', 'Longitude');
     $validator->numeric('face_confidence', $data['face_confidence'] ?? '', 'Face Confidence');
-    $validator->range('face_confidence', $data['face_confidence'] ?? 0, 75, 100, 'Face Confidence');
+    $validator->range('face_confidence', $data['face_confidence'] ?? 0, $faceConfidenceThreshold - 10, 100, 'Face Confidence');
 
     if ($validator->hasErrors()) {
         Response::validationError($validator->getErrors());
     }
 
-    // Ensure face confidence is above minimum threshold (75%)
-    $minimumConfidence = 75;
-    if ($data['face_confidence'] < $minimumConfidence) {
-        Response::error('Face verification failed. Confidence: ' . round($data['face_confidence']) . '% (minimum required: ' . $minimumConfidence . '%)', 400);
+    // Ensure face confidence is above minimum threshold
+    if ($data['face_confidence'] < $faceConfidenceThreshold) {
+        Response::error('Face verification failed. Confidence: ' . round($data['face_confidence']) . '% (minimum required: ' . $faceConfidenceThreshold . '%)', 400);
     }
 
     // Get current user
