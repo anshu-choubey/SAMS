@@ -14,6 +14,26 @@ try {
     $columnsStmt = $db->query($columnsQuery);
     $existingColumns = $columnsStmt->fetchAll(PDO::FETCH_COLUMN);
     
+    // Rename setting_key to key if needed
+    if (in_array('setting_key', $existingColumns) && !in_array('key', $existingColumns)) {
+        $db->exec("ALTER TABLE system_settings CHANGE COLUMN `setting_key` `key` VARCHAR(100)");
+        echo "[✓] Renamed setting_key to key\n";
+    }
+    
+    // Rename setting_value to value if needed
+    if (in_array('setting_value', $existingColumns) && !in_array('value', $existingColumns)) {
+        $db->exec("ALTER TABLE system_settings CHANGE COLUMN `setting_value` `value` TEXT");
+        echo "[✓] Renamed setting_value to value\n";
+    }
+    
+    // Rename setting_type to type if needed
+    if (in_array('setting_type', $existingColumns) && !in_array('type', $existingColumns)) {
+        // First need to change the enum values
+        $db->exec("ALTER TABLE system_settings MODIFY COLUMN `setting_type` VARCHAR(20)");
+        $db->exec("ALTER TABLE system_settings CHANGE COLUMN `setting_type` `type` VARCHAR(20)");
+        echo "[✓] Renamed setting_type to type\n";
+    }
+    
     // Add category column if missing
     if (!in_array('category', $existingColumns)) {
         $db->exec("ALTER TABLE system_settings ADD COLUMN `category` VARCHAR(50) AFTER `description`");
@@ -26,10 +46,13 @@ try {
         echo "[✓] Added validation_rule column\n";
     }
     
-    // Add updated_at column if missing
+    // Update updated_at column if needed
     if (!in_array('updated_at', $existingColumns)) {
         $db->exec("ALTER TABLE system_settings ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
         echo "[✓] Added updated_at column\n";
+    } else {
+        // Ensure updated_at has the right definition
+        $db->exec("ALTER TABLE system_settings MODIFY COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
 
     // Define settings to create or update
