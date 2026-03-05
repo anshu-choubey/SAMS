@@ -8,14 +8,11 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/helpers/SettingsHelper.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
 
 try {
     $database = new Database();
     $db = $database->getConnection();
-    
-    SettingsHelper::setDatabase($db);
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $type = $_GET['type'] ?? 'all';
