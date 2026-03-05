@@ -134,8 +134,7 @@ try {
     ];
 
     // Get all students in the class (dynamic query to avoid PDO parameter issues)
-    // Include face_photo for display in teacher attendance screen
-    $studentsQuery = "SELECT s.id as student_id, s.roll_number, s.face_photo, u.full_name
+    $studentsQuery = "SELECT s.id as student_id, s.roll_number, u.full_name
                       FROM students s
                       JOIN users u ON s.user_id = u.id
                       WHERE s.department_id = :department_id
@@ -193,7 +192,6 @@ try {
             'student_id' => (int)$student['student_id'],
             'student_name' => $student['full_name'],
             'roll_number' => $student['roll_number'],
-            'face_photo' => $student['face_photo'], // Include face photo (base64) for display
             'status' => $status,
             'marked_at' => $attendance ? $attendance['marked_at'] : null,
             'face_confidence' => $attendance ? (float)$attendance['face_confidence_score'] : null
