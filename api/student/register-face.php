@@ -56,9 +56,12 @@ try {
     }
 
     $student->id = $studentData['id'];
+    
+    // Get optional face photo (base64 encoded)
+    $facePhoto = $data['face_photo'] ?? null;
 
-    // Register face
-    if ($student->registerFace($data['face_embedding'])) {
+    // Register face with optional photo
+    if ($student->registerFace($data['face_embedding'], $facePhoto)) {
         Response::success([
             'student_id' => $student->id,
             'face_registered' => true

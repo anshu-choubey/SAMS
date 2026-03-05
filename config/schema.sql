@@ -112,6 +112,7 @@ CREATE TABLE students (
     admission_date DATE,
     face_registered BOOLEAN DEFAULT FALSE,
     face_data TEXT, -- Encrypted facial embedding (AES-256)
+    face_photo LONGBLOB, -- Base64 encoded face photo from registration
     face_registration_date TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

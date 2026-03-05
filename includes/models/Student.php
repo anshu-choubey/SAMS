@@ -52,18 +52,20 @@ class Student {
     /**
      * Register face data
      */
-    public function registerFace($faceEmbedding) {
+    public function registerFace($faceEmbedding, $facePhoto = null) {
         // Encrypt face data
         $encryptedData = $this->encryptFaceData($faceEmbedding);
 
         $query = "UPDATE " . $this->table . " 
                   SET face_data = :face_data, 
+                      face_photo = :face_photo,
                       face_registered = TRUE, 
                       face_registration_date = NOW()
                   WHERE id = :id";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':face_data', $encryptedData);
+        $stmt->bindParam(':face_photo', $facePhoto);
         $stmt->bindParam(':id', $this->id);
 
         return $stmt->execute();

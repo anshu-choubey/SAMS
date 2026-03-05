@@ -38,7 +38,7 @@ try {
         case 'GET':
             $profileQuery = "SELECT s.id, s.roll_number, s.department_id, d.name as department_name,
                                     s.semester, s.section, s.batch_year, s.admission_date,
-                                    s.face_registered, s.face_registration_date,
+                                    s.face_registered, s.face_registration_date, s.face_photo,
                                     u.full_name, u.email, u.phone, u.profile_image
                              FROM students s
                              LEFT JOIN departments d ON s.department_id = d.id
@@ -64,7 +64,8 @@ try {
                     'admission_date' => $profile['admission_date'],
                     'face_registered' => (bool)$profile['face_registered'],
                     'face_registration_date' => $profile['face_registration_date'],
-                    'profile_image' => $profile['profile_image']
+                    'profile_image' => $profile['profile_image'],
+                    'face_photo' => $profile['face_photo']
                 ]
             ]);
             break;
