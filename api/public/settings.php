@@ -24,36 +24,19 @@ try {
             case 'attendance':
                 // Attendance settings for marking attendance
                 $settings = [
-                    'gps_radius' => SettingsHelper::get('gps_proximity_radius', 50),
-                    'face_confidence_threshold' => SettingsHelper::get('face_confidence_threshold', 75),
-                    'enable_face_verification' => SettingsHelper::get('enable_face_verification', true),
-                    'enable_gps_verification' => SettingsHelper::get('enable_gps_verification', true),
-                    'minimum_threshold' => SettingsHelper::get('attendance_warning_threshold', 75),
-                    'allow_late_attendance' => SettingsHelper::get('allow_late_attendance', true),
-                    'late_threshold_minutes' => SettingsHelper::get('late_threshold_minutes', 15)
+                    'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
+                    'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
+                    'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
+                    'enable_liveness_detection' => getSetting($db, 'enable_liveness_detection', true)
                 ];
                 Response::success($settings);
                 break;
 
-            case 'system':
-                // System configuration for app
+            case 'academic':
+                // Academic settings
                 $settings = [
-                    'session_timeout' => SettingsHelper::get('session_lifetime', 604800),
-                    'academic_year' => SettingsHelper::get('academic_year', '2025-26'),
-                    'current_semester' => SettingsHelper::get('current_semester', 2),
-                    'maintenance_mode' => SettingsHelper::get('maintenance_mode', false)
-                ];
-                Response::success($settings);
-                break;
-
-            case 'app':
-                // App information and branding
-                $settings = [
-                    'app_name' => SettingsHelper::get('app_name', 'SAMS'),
-                    'app_version' => SettingsHelper::get('app_version', '1.0.0'),
-                    'institution_name' => SettingsHelper::get('institution_name', 'Your Institution'),
-                    'institution_logo' => SettingsHelper::get('institution_logo', ''),
-                    'support_email' => SettingsHelper::get('support_email', 'support@sams.edu')
+                    'academic_year' => getSetting($db, 'academic_year', 2026),
+                    'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16)
                 ];
                 Response::success($settings);
                 break;
@@ -63,26 +46,14 @@ try {
                 // All public settings
                 $config = [
                     'attendance' => [
-                        'gps_radius' => SettingsHelper::get('gps_proximity_radius', 50),
-                        'face_confidence_threshold' => SettingsHelper::get('face_confidence_threshold', 75),
-                        'enable_face_verification' => SettingsHelper::get('enable_face_verification', true),
-                        'enable_gps_verification' => SettingsHelper::get('enable_gps_verification', true),
-                        'minimum_threshold' => SettingsHelper::get('attendance_warning_threshold', 75),
-                        'allow_late_attendance' => SettingsHelper::get('allow_late_attendance', true),
-                        'late_threshold_minutes' => SettingsHelper::get('late_threshold_minutes', 15)
+                        'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
+                        'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
+                        'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
+                        'enable_liveness_detection' => getSetting($db, 'enable_liveness_detection', true)
                     ],
-                    'system' => [
-                        'session_timeout' => SettingsHelper::get('session_lifetime', 604800),
-                        'academic_year' => SettingsHelper::get('academic_year', '2025-26'),
-                        'current_semester' => SettingsHelper::get('current_semester', 2),
-                        'maintenance_mode' => SettingsHelper::get('maintenance_mode', false)
-                    ],
-                    'app_info' => [
-                        'name' => SettingsHelper::get('app_name', 'SAMS'),
-                        'version' => SettingsHelper::get('app_version', '1.0.0'),
-                        'institution' => SettingsHelper::get('institution_name', 'Your Institution'),
-                        'logo_url' => SettingsHelper::get('institution_logo', ''),
-                        'support_email' => SettingsHelper::get('support_email', 'support@sams.edu')
+                    'academic' => [
+                        'academic_year' => getSetting($db, 'academic_year', 2026),
+                        'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16)
                     ]
                 ];
                 Response::success($config);
@@ -100,5 +71,38 @@ try {
         'error' => $e->getMessage(),
         'timestamp' => date('Y-m-d H:i:s')
     ]);
+}
+
+/**
+ * Get setting value from database with default fallback
+ */
+function getSetting($db, $key, $default = null) {
+    try {
+        $query = "SELECT `value`, `type` FROM system_settings WHERE `key` = :key LIMIT 1";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':key', $key);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result) {
+            return $default;
+        }
+        
+        $value = $result['value'];
+        
+        // Cast based on type
+        if ($result['type'] === 'integer') {
+            return intval($value);
+        } elseif ($result['type'] === 'float') {
+            return floatval($value);
+        } elseif ($result['type'] === 'boolean') {
+            return $value === '1' || strtolower($value) === 'true';
+        }
+        
+        return $value;
+    } catch (Exception $e) {
+        error_log("Error getting setting $key: " . $e->getMessage());
+        return $default;
+    }
 }
 ?>
