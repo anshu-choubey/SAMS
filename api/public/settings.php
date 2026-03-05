@@ -31,17 +31,34 @@ try {
                 break;
 
             case 'academic':
-                // Academic settings
+            case 'system':
+                // System/Academic settings
                 $settings = [
+                    'session_timeout' => 3600,
                     'academic_year' => getSetting($db, 'academic_year', 2026),
-                    'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16)
+                    'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16),
+                    'current_semester' => 1,
+                    'maintenance_mode' => false
                 ];
                 Response::success($settings);
                 break;
 
+            case 'app':
+            case 'app_info':
+                // App information
+                $appInfo = [
+                    'name' => 'SAMS',
+                    'version' => '1.0.0',
+                    'institution' => 'Your Institution',
+                    'logo_url' => '',
+                    'support_email' => 'support@sams.local'
+                ];
+                Response::success($appInfo);
+                break;
+
             case 'all':
             default:
-                // All public settings
+                // All public settings - matches AppSettingsConfig in Android
                 $config = [
                     'attendance' => [
                         'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
@@ -49,9 +66,19 @@ try {
                         'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
                         'enable_liveness_detection' => getSetting($db, 'enable_liveness_detection', true)
                     ],
-                    'academic' => [
+                    'system' => [
+                        'session_timeout' => 3600,
                         'academic_year' => getSetting($db, 'academic_year', 2026),
-                        'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16)
+                        'semester_duration_weeks' => getSetting($db, 'semester_duration_weeks', 16),
+                        'current_semester' => 1,
+                        'maintenance_mode' => false
+                    ],
+                    'app_info' => [
+                        'name' => 'SAMS',
+                        'version' => '1.0.0',
+                        'institution' => 'Your Institution',
+                        'logo_url' => '',
+                        'support_email' => 'support@sams.local'
                     ]
                 ];
                 Response::success($config);
