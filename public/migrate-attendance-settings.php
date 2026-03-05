@@ -144,8 +144,8 @@ try {
             echo "[✓] Updated: {$setting['key']}\n";
         } else {
             // Insert
-            $insertQuery = "INSERT INTO system_settings (`key`, `value`, `type`, `description`, `category`, `validation_rule`, `created_at`)
-                           VALUES (:key, :value, :type, :description, :category, :validation_rule, NOW())";
+            $insertQuery = "INSERT INTO system_settings (`key`, `value`, `type`, `description`, `category`, `validation_rule`)
+                           VALUES (:key, :value, :type, :description, :category, :validation_rule)";
             $stmt = $db->prepare($insertQuery);
             $stmt->bindParam(':key', $setting['key']);
             $stmt->bindParam(':value', $setting['value']);
