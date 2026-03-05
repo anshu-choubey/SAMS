@@ -98,6 +98,16 @@ if ($db) {
         $stmt = $db->query("SELECT `key`, `value`, `type`, `description`, `category`, `validation_rule` FROM system_settings ORDER BY `category`, `key`");
         $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Group settings by category
+        $settingsByCategory = [];
+        foreach ($allSettings as $setting) {
+            $category = $setting['category'] ?? 'General';
+            if (!isset($settingsByCategory[$category])) {
+                $settingsByCategory[$category] = [];
+            }
+            $settingsByCategory[$category][] = $setting;
+        }
+        
         // Also keep the old array format for backward compatibility
         foreach ($allSettings as $setting) {
             $value = $setting['value'];
@@ -499,6 +509,13 @@ function getSettingDescription($key) {
             <!-- Settings Grid -->
             <div class="settings-grid" id="settingsGrid">
                 <?php
+                if (empty($settingsByCategory)): ?>
+                    <div style="padding: 40px; text-align: center; grid-column: 1 / -1;">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #cbd5e0; margin-bottom: 20px; display: block;"></i>
+                        <h3 style="color: #718096;">No Settings Found</h3>
+                        <p style="color: #a0aec0;">Please check your database connection.</p>
+                    </div>
+                <?php else:
                 foreach ($settingsByCategory as $category => $settings):
                     $categoryId = strtolower(str_replace(' ', '-', $category));
                     foreach ($settings as $setting):
@@ -589,6 +606,7 @@ function getSettingDescription($key) {
                 <?php
                     endforeach;
                 endforeach;
+                endif;
                 ?>
             </div>
         </div>
