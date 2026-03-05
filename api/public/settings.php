@@ -34,7 +34,7 @@ try {
                     'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
                     'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
                     'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
-                    'enable_liveness_detection' => getSetting($db, 'enable_liveness_detection', true)
+                    'enableLivenessDetection' => getSetting($db, 'enable_liveness_detection', true)
                 ];
                 Response::success($settings);
                 break;
@@ -73,7 +73,7 @@ try {
                         'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
                         'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
                         'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
-                        'enable_liveness_detection' => getSetting($db, 'enable_liveness_detection', true)
+                        'enableLivenessDetection' => getSetting($db, 'enable_liveness_detection', true)
                     ],
                     'system' => [
                         'session_timeout' => 3600,
