@@ -9,19 +9,27 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
-    // Update system_settings table structure if needed
-    $alterQuery = "ALTER TABLE system_settings 
-                   ADD COLUMN IF NOT EXISTS `category` VARCHAR(50) AFTER `description`,
-                   ADD COLUMN IF NOT EXISTS `validation_rule` VARCHAR(100) AFTER `category`,
-                   ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
+    // Check which columns already exist and add missing ones
+    $columnsQuery = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'system_settings' AND TABLE_SCHEMA = DATABASE()";
+    $columnsStmt = $db->query($columnsQuery);
+    $existingColumns = $columnsStmt->fetchAll(PDO::FETCH_COLUMN);
     
-    try {
-        $db->exec($alterQuery);
-        echo "[✓] Updated system_settings table structure\n";
-    } catch (PDOException $e) {
-        if (strpos($e->getMessage(), 'Duplicate') === false) {
-            throw $e;
-        }
+    // Add category column if missing
+    if (!in_array('category', $existingColumns)) {
+        $db->exec("ALTER TABLE system_settings ADD COLUMN `category` VARCHAR(50) AFTER `description`");
+        echo "[✓] Added category column\n";
+    }
+    
+    // Add validation_rule column if missing
+    if (!in_array('validation_rule', $existingColumns)) {
+        $db->exec("ALTER TABLE system_settings ADD COLUMN `validation_rule` VARCHAR(100) AFTER `category`");
+        echo "[✓] Added validation_rule column\n";
+    }
+    
+    // Add updated_at column if missing
+    if (!in_array('updated_at', $existingColumns)) {
+        $db->exec("ALTER TABLE system_settings ADD COLUMN `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        echo "[✓] Added updated_at column\n";
     }
 
     // Define settings to create or update
