@@ -346,20 +346,6 @@ if ($db) {
     </script>
 </body>
 </html>
-        </div>
-
-        <!-- Send Notification Form -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Send Personalized Notification</h5>
-            </div>
-            <div class="card-body">
-                <form id="notificationForm" onsubmit="sendNotification(event)">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label">Notification Type *</label>
-                            <select class="form-select" id="notificationType" required onchange="updateMessagePreview()">
-                                <option value="">Select notification type</option>
                                 <option value="low_attendance">Low Attendance Alert</option>
                                 <option value="perfect_attendance">Perfect Attendance</option>
                                 <option value="absent_today">Absent Today</option>
