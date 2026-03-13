@@ -7,6 +7,7 @@ $menuItems = [
     ['page' => 'subjects.php', 'icon' => 'bi-book', 'label' => 'Subjects', 'tooltip' => 'Subjects'],
     ['page' => 'teacher-assignments.php', 'icon' => 'bi-person-badge', 'label' => 'Assignments', 'tooltip' => 'Teacher Assignments'],
     ['page' => 'schedules.php', 'icon' => 'bi-calendar-week', 'label' => 'Schedules', 'tooltip' => 'Schedules'],
+    ['page' => 'notifications.php', 'icon' => 'bi-bell', 'label' => 'Notifications', 'tooltip' => 'Send Notifications'],
     ['page' => 'reports.php', 'icon' => 'bi-file-earmark-bar-graph', 'label' => 'Reports', 'tooltip' => 'Reports'],
     ['page' => 'settings.php', 'icon' => 'bi-gear', 'label' => 'Settings', 'tooltip' => 'Settings'],
 ];
