@@ -97,6 +97,13 @@ if ($db) {
             <h2 class="mb-4"><i class="bi bi-bell-fill"></i> Notifications Management</h2>
             <p class="text-muted mb-4">Send personalized notifications to students and teachers</p>
 
+            <!-- Send Personalized Notification Alert -->
+            <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Send Personalized Notifications</strong> - Select a user and customize the message to send targeted notifications. All notifications are logged and tracked.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
             <!-- Statistics -->
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
@@ -134,15 +141,16 @@ if ($db) {
             </div>
 
             <!-- Send Notification Form -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Send Notification</h6>
+            <div class="card mb-4 border-primary border-2">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-send-check text-primary me-2"></i>Send Personalized Notification</h5>
+                    <small class="text-muted d-block mt-1">Create and send custom notifications to individual students or teachers</small>
                 </div>
                 <div class="card-body">
                     <form id="notificationForm" onsubmit="sendNotification(event)">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="notificationType" class="form-label">Notification Type</label>
+                                <label for="notificationType" class="form-label"><strong>Notification Type</strong></label>
                                 <select id="notificationType" class="form-select" required onchange="updateMessagePreview()">
                                     <option value="">-- Select Type --</option>
                                     <option value="low_attendance">Low Attendance Alert</option>
@@ -152,44 +160,56 @@ if ($db) {
                                     <option value="performance_praise">Performance Praise</option>
                                     <option value="custom">Custom Message</option>
                                 </select>
+                                <small class="text-muted d-block mt-1">Choose a predefined notification type or select Custom for a personalized message</small>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="targetUser" class="form-label">Target User</label>
+                                <label for="targetUser" class="form-label"><strong>Send To</strong></label>
                                 <select id="targetUser" class="form-select" required>
-                                    <option value="">-- Select User --</option>
+                                    <option value="">-- Select Recipient --</option>
                                     <?php foreach ($users as $user): ?>
                                     <option value="<?php echo $user['id']; ?>">
                                         <?php echo htmlspecialchars($user['full_name']) . ' (' . htmlspecialchars($user['role']) . ')'; ?>
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
+                                <small class="text-muted d-block mt-1">Select the student or teacher who will receive this notification</small>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="customTitle" class="form-label"><strong>Title</strong></label>
+                                <input type="text" id="customTitle" class="form-control" placeholder="e.g., Attendance Reminder">
+                                <small class="text-muted d-block mt-1">Optional: Custom title for the notification (leave empty to use default)</small>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <label for="customTitle" class="form-label">Title (Optional)</label>
-                                <input type="text" id="customTitle" class="form-control" placeholder="Custom notification title">
+                                <label for="customMessage" class="form-label"><strong>Message</strong></label>
+                                <textarea id="customMessage" class="form-control" rows="4" placeholder="Enter your personalized message here..."></textarea>
+                                <small class="text-muted d-block mt-1">Optional: Custom message content (leave empty to use default message for selected type)</small>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-12 mb-3">
-                                <label for="customMessage" class="form-label">Message (Optional)</label>
-                                <textarea id="customMessage" class="form-control" rows="4" placeholder="Custom notification message"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <label for="customData" class="form-label">Additional Data (JSON - Optional)</label>
+                                <label for="customData" class="form-label"><strong>Additional Data (JSON)</strong></label>
                                 <textarea id="customData" class="form-control" rows="2" placeholder='{"key": "value"}'></textarea>
+                                <small class="text-muted d-block mt-1">Optional: Add extra data in JSON format to pass to the notification handler</small>
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-send me-2"></i> Send Notification
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-2"></i> Send Notification
+                            </button>
+                            <button type="reset" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-2"></i> Clear Form
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
