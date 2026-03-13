@@ -268,8 +268,8 @@ if ($db) {
             <?php else: ?>
             <div class="card">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                    <p class="text-muted mt-3">No notifications sent yet. Use the form above to send your first notification!</p>
+                    <i class="bi bi-bell-slash" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3"><em>No notifications sent yet</em></p>
                 </div>
             </div>
             <?php endif; ?>
@@ -449,8 +449,8 @@ if ($db) {
         <?php else: ?>
         <div class="card">
             <div class="card-body text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                <p class="text-muted mt-3">No notifications sent yet. Use the form above to send your first notification!</p>
+                <i class="bi bi-bell-slash" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-3"><em>No notifications sent yet</em></p>
             </div>
         </div>
         <?php endif; ?>
