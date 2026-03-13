@@ -61,7 +61,8 @@ try {
         // Update preferences
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $preferences = $data['preferences'] ?? [];
+        // Handle both formats: direct map or wrapped in 'preferences' key
+        $preferences = !empty($data['preferences']) ? $data['preferences'] : $data;
         
         // Validate that we only accept known preference keys
         $validKeys = array_keys($defaultPreferences);

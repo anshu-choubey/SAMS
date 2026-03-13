@@ -85,169 +85,247 @@ if ($db) {
     <title>Notifications Management - SAMS Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary: #0066cc;
-            --success: #28a745;
-            --warning: #ffc107;
-            --danger: #dc3545;
-        }
-        
-        body {
-            background: #f5f7fa;
-            color: #333;
-        }
-        
-        .navbar {
-            background: linear-gradient(135deg, var(--primary) 0%, #0052a3 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .card {
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 24px;
-            border-radius: 12px;
-        }
-        
-        .stat-card {
-            text-align: center;
-            padding: 24px;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: var(--primary);
-        }
-        
-        .stat-label {
-            color: #666;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-        
-        .btn-primary {
-            background: var(--primary);
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            background: #0052a3;
-        }
-        
-        .badge-sent {
-            background: #28a745;
-        }
-        
-        .badge-unsent {
-            background: #6c757d;
-        }
-        
-        .badge-read {
-            background: #0066cc;
-        }
-        
-        .badge-unread {
-            background: #ffc107;
-        }
-        
-        .notification-type-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .type-low_attendance {
-            background: #ffe5e5;
-            color: #cc0000;
-        }
-        
-        .type-perfect_attendance {
-            background: #e5ffe5;
-            color: #00cc00;
-        }
-        
-        .type-schedule_reminder {
-            background: #e5f2ff;
-            color: #0066cc;
-        }
-        
-        .type-performance_praise {
-            background: #fff0e5;
-            color: #ff8800;
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/css/admin.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-lg">
-            <a class="navbar-brand" href="/admin/index.php">
-                <i class="bi bi-graph-up"></i> SAMS Admin
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/index.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/admin/notifications.php">
-                            <i class="bi bi-bell"></i> Notifications
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/users.php">Users</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/logout.php">Logout</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include '../includes/sidebar.php'; ?>
 
-    <div class="container-lg mt-4 mb-5">
-        <!-- Header -->
-        <div class="row mb-4">
-            <div class="col">
-                <h1><i class="bi bi-bell-fill"></i> Notifications Management</h1>
-                <p class="text-muted">Send personalized notifications to students and teachers</p>
-            </div>
-        </div>
+    <div class="main-content">
+        <?php include '../includes/navbar.php'; ?>
 
-        <!-- Statistics -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="stat-value"><?php echo $stats['total_notifications'] ?? 0; ?></div>
-                    <div class="stat-label">Total Notifications</div>
+        <div class="content-wrapper">
+            <h2 class="mb-4"><i class="bi bi-bell-fill"></i> Notifications Management</h2>
+            <p class="text-muted mb-4">Send personalized notifications to students and teachers</p>
+
+            <!-- Statistics -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card stat-primary">
+                        <div class="card-body">
+                            <div class="stat-value"><?php echo $stats['total_notifications'] ?? 0; ?></div>
+                            <div class="stat-label">Total Notifications</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card stat-success">
+                        <div class="card-body">
+                            <div class="stat-value"><?php echo $stats['sent_count'] ?? 0; ?></div>
+                            <div class="stat-label">Sent</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card stat-info">
+                        <div class="card-body">
+                            <div class="stat-value"><?php echo $stats['read_count'] ?? 0; ?></div>
+                            <div class="stat-label">Read</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stat-card stat-warning">
+                        <div class="card-body">
+                            <div class="stat-value"><?php echo $stats['admins_count'] ?? 0; ?></div>
+                            <div class="stat-label">Admins Sent</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card" style="border-left-color: var(--success);">
-                    <div class="stat-value" style="color: var(--success);"><?php echo $stats['sent_count'] ?? 0; ?></div>
-                    <div class="stat-label">Sent</div>
+
+            <!-- Send Notification Form -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Send Notification</h6>
+                </div>
+                <div class="card-body">
+                    <form id="notificationForm" onsubmit="sendNotification(event)">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="notificationType" class="form-label">Notification Type</label>
+                                <select id="notificationType" class="form-select" required onchange="updateMessagePreview()">
+                                    <option value="">-- Select Type --</option>
+                                    <option value="low_attendance">Low Attendance Alert</option>
+                                    <option value="perfect_attendance">Perfect Attendance</option>
+                                    <option value="absent_today">Absence Alert</option>
+                                    <option value="schedule_reminder">Schedule Reminder</option>
+                                    <option value="performance_praise">Performance Praise</option>
+                                    <option value="custom">Custom Message</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="targetUser" class="form-label">Target User</label>
+                                <select id="targetUser" class="form-select" required>
+                                    <option value="">-- Select User --</option>
+                                    <?php foreach ($users as $user): ?>
+                                    <option value="<?php echo $user['id']; ?>">
+                                        <?php echo htmlspecialchars($user['full_name']) . ' (' . htmlspecialchars($user['role']) . ')'; ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="customTitle" class="form-label">Title (Optional)</label>
+                                <input type="text" id="customTitle" class="form-control" placeholder="Custom notification title">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="customMessage" class="form-label">Message (Optional)</label>
+                                <textarea id="customMessage" class="form-control" rows="4" placeholder="Custom notification message"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="customData" class="form-label">Additional Data (JSON - Optional)</label>
+                                <textarea id="customData" class="form-control" rows="2" placeholder='{"key": "value"}'></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-2"></i> Send Notification
+                        </button>
+                    </form>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card" style="border-left-color: #0066cc;">
-                    <div class="stat-value" style="color: #0066cc;"><?php echo $stats['read_count'] ?? 0; ?></div>
-                    <div class="stat-label">Read</div>
+
+            <!-- Recent Notifications -->
+            <?php if (!empty($recentNotifications)): ?>
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Notifications</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Target</th>
+                                <th>Title</th>
+                                <th>Creator</th>
+                                <th>Sent</th>
+                                <th>Read</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recentNotifications as $notif): ?>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info" style="font-size: 11px;">
+                                            <?php echo ucwords(str_replace('_', ' ', htmlspecialchars($notif['notification_type']))); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($notif['target_name'] ?? 'All Users'); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($notif['title'], 0, 50)); ?></td>
+                                    <td><?php echo htmlspecialchars($notif['creator_name'] ?? 'System'); ?></td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $notif['is_sent'] ? 'success' : 'secondary'; ?>">
+                                            <?php echo $notif['is_sent'] ? '✓ Sent' : 'Pending'; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?php echo $notif['is_read'] ? 'primary' : 'warning'; ?>">
+                                            <?php echo $notif['is_read'] ? '✓ Read' : 'Unread'; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            <?php echo date('M d, H:i', strtotime($notif['created_at'])); ?>
+                                        </small>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card" style="border-left-color: var(--warning);">
-                    <div class="stat-value" style="color: #ff8800;"><?php echo $stats['admins_count'] ?? 0; ?></div>
-                    <div class="stat-label">Admins Sent</div>
+            <?php else: ?>
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No notifications sent yet. Use the form above to send your first notification!</p>
                 </div>
             </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/admin.js"></script>
+    <script>
+        function updateMessagePreview() {
+            const type = document.getElementById('notificationType').value;
+            const messages = {
+                'low_attendance': 'Hi [Name], your attendance is at [%]. Minimum required: 75%. Please attend upcoming classes.',
+                'perfect_attendance': 'Congratulations [Name]! You\'ve maintained 100% attendance. Keep it up!',
+                'absent_today': 'Hi [Name], you were marked absent today. Use the app to register for makeup session if available.',
+                'schedule_reminder': 'Hi [Name], you have [Subject] class scheduled tomorrow at [Time]. Be on time!',
+                'performance_praise': 'Hey [Name], you\'ve been one of the most consistent attendees! Your dedication is appreciated.',
+                'custom': ''
+            };
+            
+            if (messages[type]) {
+                document.getElementById('customMessage').placeholder = messages[type];
+            }
+        }
+
+        async function sendNotification(event) {
+            event.preventDefault();
+            
+            const notifType = document.getElementById('notificationType').value;
+            const targetUserId = document.getElementById('targetUser').value;
+            const customTitle = document.getElementById('customTitle').value;
+            const customMessage = document.getElementById('customMessage').value;
+            let customData = {};
+            
+            try {
+                const dataStr = document.getElementById('customData').value;
+                if (dataStr) {
+                    customData = JSON.parse(dataStr);
+                }
+            } catch (e) {
+                alert('Invalid JSON in Additional Data field');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/notifications/send-personalized.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        notification_class: notifType,
+                        target_user_id: parseInt(targetUserId),
+                        title: customTitle || undefined,
+                        message: customMessage || undefined,
+                        data: Object.keys(customData).length > 0 ? customData : undefined
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✓ Notification sent successfully to ' + result.target_user);
+                    document.getElementById('notificationForm').reset();
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (result.message || 'Failed to send notification'));
+                }
+            } catch (error) {
+                alert('✗ Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
         </div>
 
         <!-- Send Notification Form -->
