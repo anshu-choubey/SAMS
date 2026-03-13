@@ -346,7 +346,6 @@ if ($db) {
     </script>
 </body>
 </html>
-                                <option value="low_attendance">Low Attendance Alert</option>
                                 <option value="perfect_attendance">Perfect Attendance</option>
                                 <option value="absent_today">Absent Today</option>
                                 <option value="schedule_reminder">Schedule Reminder</option>
