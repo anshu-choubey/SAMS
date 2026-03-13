@@ -1,0 +1,415 @@
+<h1 id="backend-architecture">1. BACKEND ARCHITECTURE</h1>
+<h2 id="sams-student-attendance-management-system---php-backend">SAMS
+(Student Attendance Management System) - PHP Backend</h2>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#overview">Overview</a></li>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#architecture-layers">Architecture Layers</a></li>
+<li><a href="#core-components">Core Components</a></li>
+<li><a href="#design-patterns">Design Patterns</a></li>
+<li><a href="#configuration--deployment">Configuration &amp;
+Deployment</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview</h2>
+<p><strong>SAMS Backend</strong> is a RESTful PHP application built with
+modern architecture principles: - <strong>Framework</strong>: Pure PHP
+7.4+ with PDO for database abstraction - <strong>Architecture</strong>:
+MVC (Model-View-Controller) with Service Layer -
+<strong>Database</strong>: MySQL/MariaDB (multi-database support
+including PostgreSQL) - <strong>Authentication</strong>: Session-based
+with JWT support - <strong>API Format</strong>: JSON REST -
+<strong>Deployment</strong>: Heroku, Azure, Docker support</p>
+<p><strong>Core Features</strong>: - User authentication (Admin,
+Teacher, Student roles) - Attendance marking with GPS + Face
+verification - Schedule management - Real-time notifications (FCM) -
+Reports and analytics - System settings management</p>
+<hr />
+<h2 id="project-structure">Project Structure</h2>
+<pre><code>sams-backend/
+├── config/
+│   ├── database.php           # PDO database connection &amp; configuration
+│   ├── constants.php          # Global constants, thresholds, timeouts
+│   ├── firebase.php           # Firebase/FCM configuration
+│   ├── fcm-helper.php         # FCM notification helper functions
+│   └── schema.sql             # Database schema (MySQL)
+│
+├── includes/
+│   ├── controllers/           # Business logic layer
+│   │   ├── AuthController.php
+│   │   └── UserController.php
+│   │
+│   ├── models/                # Data access layer (ORM)
+│   │   ├── User.php
+│   │   ├── Student.php
+│   │   ├── Teacher.php
+│   │   ├── Attendance.php
+│   │   ├── Schedule.php
+│   │   ├── Subject.php
+│   │   ├── Department.php
+│   │   ├── Notification.php
+│   │   └── ...
+│   │
+│   ├── helpers/               # Utility functions
+│   │   ├── Response.php       # Standardized JSON responses
+│   │   ├── Validator.php      # Input validation
+│   │   ├── DateHelper.php     # Date/time utilities
+│   │   ├── GpsHelper.php      # GPS distance calculation
+│   │   ├── EncryptionHelper.php
+│   │   └── ...
+│   │
+│   └── middleware/            # Cross-cutting concerns
+│       ├── Auth.php           # Authentication &amp; authorization
+│       ├── CORS.php           # CORS headers handling
+│       └── RateLimit.php      # Rate limiting
+│
+├── api/                       # Public API endpoints (routing)
+│   ├── admin/                 # Admin APIs
+│   │   ├── users.php
+│   │   ├── departments.php
+│   │   ├── subjects.php
+│   │   ├── teacher-assignments.php
+│   │   ├── schedules.php
+│   │   ├── settings.php
+│   │   ├── reports.php
+│   │   └── ...
+│   │
+│   ├── teacher/               # Teacher APIs
+│   │   ├── dashboard.php
+│   │   ├── profile.php
+│   │   ├── schedule.php
+│   │   ├── start-class.php
+│   │   ├── end-class.php
+│   │   ├── class-attendance.php
+│   │   ├── manual-attendance.php
+│   │   └── ...
+│   │
+│   ├── student/               # Student APIs
+│   │   ├── dashboard.php
+│   │   ├── profile.php
+│   │   ├── schedule.php
+│   │   ├── register-face.php
+│   │   ├── verify-face.php
+│   │   ├── mark-attendance.php
+│   │   ├── attendance-history.php
+│   │   └── ...
+│   │
+│   ├── fcm/                   # Firebase Cloud Messaging
+│   │   └── register-token.php
+│   │
+│   ├── public/                # Public endpoints (no auth required)
+│   │   └── index.php
+│   │
+│   ├── health-check.php       # System health status
+│   └── test-db.php            # Database connection test
+│
+├── public/                    # Web root (served by web server)
+│   ├── index.php              # Main entry point
+│   ├── login.php              # Legacy login page
+│   └── assets/                # Static files (CSS, JS, images)
+│
+├── logs/                      # Application logs
+├── uploads/                   # User uploads (profile photos, etc.)
+├── vendor/                    # Composer dependencies
+│
+├── composer.json              # PHP dependencies
+├── .env                       # Environment variables
+├── Dockerfile                 # Docker configuration
+├── docker-compose.yml         # Docker Compose setup
+├── Procfile                   # Heroku deployment config
+├── deploy-azure.sh            # Azure deployment script
+└── README.md                  # Project documentation</code></pre>
+<hr />
+<h2 id="architecture-layers">Architecture Layers</h2>
+<h3 id="presentation-layer-api-endpoints">1. <strong>Presentation
+Layer</strong> (API Endpoints)</h3>
+<p><strong>Location</strong>: <code>/api/**/*.php</code></p>
+<p>Handles HTTP requests and returns JSON responses: - Validates HTTP
+method (GET, POST, PUT, DELETE) - Calls middleware (CORS, Auth) - Routes
+to controller methods - Returns standardized JSON responses</p>
+<p><strong>Example</strong>: <code>/api/student/dashboard.php</code></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">header</span>(<span class="st">&#39;Content-Type: application/json&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">require_once</span> <span class="cn">__DIR__</span> <span class="op">.</span> <span class="st">&#39;/../config/database.php&#39;</span><span class="ot">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">require_once</span> <span class="cn">__DIR__</span> <span class="op">.</span> <span class="st">&#39;/../includes/middleware/Auth.php&#39;</span><span class="ot">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co">// 1. CORS handling</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="cn">CORS</span>::handle()<span class="ot">;</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">// 2. Authentication</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span> <span class="op">=</span> Auth::user()<span class="ot">;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span><span class="va">$user</span>) {</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    Response::unauthorized(<span class="st">&#39;Login required&#39;</span>)<span class="ot">;</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">// 3. Route to controller</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="va">$controller</span> <span class="op">=</span> <span class="kw">new</span> StudentController(<span class="va">$db</span>)<span class="ot">;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="va">$controller</span>-&gt;getDashboard(<span class="va">$user</span>[<span class="st">&#39;id&#39;</span>])<span class="ot">;</span></span></code></pre></div>
+<h3 id="business-logic-layer-controllers">2. <strong>Business Logic
+Layer</strong> (Controllers)</h3>
+<p><strong>Location</strong>:
+<code>/includes/controllers/*.php</code></p>
+<p>Contains core business logic and orchestrates models: - Validates
+input data - Calls model methods - Handles business rules - Performs
+error handling - Prepares response data</p>
+<p><strong>Responsibilities</strong>: - Authentication &amp;
+authorization checks - Data validation &amp; transformation - Calling
+appropriate models - Error handling and logging - Response
+formatting</p>
+<h3 id="data-access-layer-models">3. <strong>Data Access Layer</strong>
+(Models)</h3>
+<p><strong>Location</strong>: <code>/includes/models/*.php</code></p>
+<p>Provides database abstraction and CRUD operations:</p>
+<p><strong>Base Model Pattern</strong>:</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Model {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="va">$db</span><span class="ot">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">protected</span> <span class="va">$table</span><span class="ot">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> <span class="bu">__construct</span>(<span class="va">$db</span>) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">$this</span>-&gt;db <span class="op">=</span> <span class="va">$db</span><span class="ot">;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> getById(<span class="va">$id</span>) { ... }</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> getAll() { ... }</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> create(<span class="va">$data</span>) { ... }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> update(<span class="va">$id</span><span class="ot">,</span> <span class="va">$data</span>) { ... }</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> delete(<span class="va">$id</span>) { ... }</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Key Models</strong>: - <code>User.php</code> - User
+authentication &amp; profile - <code>Student.php</code> - Student data
+&amp; face registration - <code>Teacher.php</code> - Teacher data &amp;
+assignments - <code>Attendance.php</code> - Attendance records -
+<code>Schedule.php</code> - Class schedules -
+<code>Notification.php</code> - System notifications -
+<code>Department.php</code>, <code>Subject.php</code> - Master data</p>
+<h3 id="helperutility-layer">4. <strong>Helper/Utility
+Layer</strong></h3>
+<p><strong>Location</strong>: <code>/includes/helpers/*.php</code></p>
+<p>Provides reusable functions:</p>
+<ul>
+<li><p><strong>Response.php</strong>: Standardized JSON responses</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Response::success(<span class="va">$data</span><span class="ot">,</span> <span class="st">&#39;Message&#39;</span>)<span class="ot">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>Response::<span class="bu">error</span>(<span class="st">&#39;Error message&#39;</span><span class="ot">,</span> <span class="dv">400</span>)<span class="ot">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>Response::validationError(<span class="va">$errors</span>)<span class="ot">;</span></span></code></pre></div></li>
+<li><p><strong>Validator.php</strong>: Input validation</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="va">$validator</span>-&gt;required(<span class="st">&#39;email&#39;</span><span class="ot">,</span> <span class="va">$data</span>[<span class="st">&#39;email&#39;</span>]<span class="ot">,</span> <span class="st">&#39;Email&#39;</span>)<span class="ot">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="va">$validator</span>-&gt;email(<span class="st">&#39;email&#39;</span><span class="ot">,</span> <span class="va">$data</span>[<span class="st">&#39;email&#39;</span>])<span class="ot">;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="va">$validator</span>-&gt;<span class="kw">numeric</span>(<span class="st">&#39;id&#39;</span><span class="ot">,</span> <span class="va">$data</span>[<span class="st">&#39;id&#39;</span>])<span class="ot">;</span></span></code></pre></div></li>
+<li><p><strong>GpsHelper.php</strong>: Distance calculation between
+coordinates</p></li>
+<li><p><strong>EncryptionHelper.php</strong>: Face data encryption
+(AES-256)</p></li>
+<li><p><strong>DateHelper.php</strong>: Date/time conversions</p></li>
+<li><p><strong>TokenHelper.php</strong>: JWT token generation</p></li>
+</ul>
+<h3 id="middleware-layer">5. <strong>Middleware Layer</strong></h3>
+<p><strong>Location</strong>:
+<code>/includes/middleware/*.php</code></p>
+<p>Cross-cutting concerns:</p>
+<ul>
+<li><p><strong>Auth.php</strong>: Session management &amp; role
+verification</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Auth::user()              <span class="co">// Get current user</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>Auth::hasRole(<span class="st">&#39;teacher&#39;</span>)  <span class="co">// Check role</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>Auth::logout()            <span class="co">// Destroy session</span></span></code></pre></div></li>
+<li><p><strong>CORS.php</strong>: Cross-Origin Resource Sharing</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="cn">CORS</span>::handle()  <span class="co">// Set CORS headers</span></span></code></pre></div></li>
+<li><p><strong>RateLimit.php</strong>: Request rate limiting</p></li>
+</ul>
+<hr />
+<h2 id="core-components">Core Components</h2>
+<h3 id="authentication-system">Authentication System</h3>
+<p><strong>Session-Based Authentication</strong>: 1. User login with
+email/password 2. Password verified using <code>password_verify()</code>
+3. Session created with unique session_id 4. Session stored in
+<code>sessions</code> table with IP &amp; user agent 5. Subsequent
+requests validated using session</p>
+<p><strong>Workflow</strong>:</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Login</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span> <span class="op">=</span> User::verifyPassword(<span class="va">$email</span><span class="ot">,</span> <span class="va">$password</span>)<span class="ot">;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="va">$sessionId</span> <span class="op">=</span> <span class="fu">bin2hex</span>(<span class="fu">random_bytes</span>(<span class="dv">32</span>))<span class="ot">;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="va">$_SESSION</span>[<span class="st">&#39;user_id&#39;</span>] <span class="op">=</span> <span class="va">$user</span>[<span class="st">&#39;id&#39;</span>]<span class="ot">;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="va">$_SESSION</span>[<span class="st">&#39;role&#39;</span>] <span class="op">=</span> <span class="va">$user</span>[<span class="st">&#39;role&#39;</span>]<span class="ot">;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co">// Verify Session (on each API call)</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="va">$user</span> <span class="op">=</span> Auth::user()<span class="ot">;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span><span class="va">$user</span>) { Response::unauthorized(<span class="st">&#39;Login required&#39;</span>)<span class="ot">;</span> }</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a><span class="co">// Authorization Check</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="va">$user</span>[<span class="st">&#39;role&#39;</span>] <span class="op">!==</span> <span class="st">&#39;teacher&#39;</span>) {</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    Response::<span class="bu">error</span>(<span class="st">&#39;Access restricted to teachers&#39;</span><span class="ot">,</span> <span class="dv">403</span>)<span class="ot">;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Roles &amp; Permissions</strong>: - <strong>Admin</strong>:
+Full system access, manage users, reports, settings -
+<strong>Teacher</strong>: Manage classes, mark attendance, view reports
+- <strong>Student</strong>: View schedule, mark attendance, view own
+attendance</p>
+<h3 id="attendance-system">Attendance System</h3>
+<p><strong>Attendance Verification</strong>: Uses dual verification for
+security:</p>
+<ol type="1">
+<li><strong>GPS Verification</strong>
+<ul>
+<li>Calculate distance between student and teacher location</li>
+<li>Threshold: 50 meters (configurable)</li>
+<li>Status: ‘gps_failed’ if distance &gt; threshold</li>
+</ul></li>
+<li><strong>Face Verification</strong>
+<ul>
+<li>Compare face embedding from Android app</li>
+<li>Confidence score threshold: 75% (configurable)</li>
+<li>Status: ‘face_failed’ if confidence &lt; threshold</li>
+</ul></li>
+<li><strong>Final Status</strong>:
+<ul>
+<li>‘success’: Both GPS &amp; Face passed</li>
+<li>‘gps_failed’: GPS out of range</li>
+<li>‘face_failed’: Face confidence too low</li>
+<li>‘both_failed’: Both checks failed</li>
+</ul></li>
+</ol>
+<p><strong>Attendance Marking Flow</strong>:</p>
+<pre><code>1. Teacher starts class → creates session in teacher_locations
+2. Student marks attendance → GPS + Face verified
+3. Database stores: location, face_score, verification_status
+4. Teacher ends class → auto-marks absent for non-present students
+5. Reports generated from attendance records</code></pre>
+<h3 id="notification-system">Notification System</h3>
+<p><strong>FCM (Firebase Cloud Messaging) Integration</strong>: -
+Android app registers FCM token - Backend sends push notifications for:
+- Attendance alerts - Low attendance warnings - Schedule changes -
+System announcements - Face re-registration required</p>
+<p><strong>Notification Types</strong>:</p>
+<pre><code>- &#39;attendance_alert&#39;: Session started, mark attendance reminder
+- &#39;low_attendance&#39;: Student below threshold
+- &#39;schedule_change&#39;: Class schedule updated
+- &#39;face_reregister&#39;: Face registration expired
+- &#39;system&#39;: System announcements</code></pre>
+<hr />
+<h2 id="design-patterns">Design Patterns</h2>
+<h3 id="mvc-pattern">1. <strong>MVC Pattern</strong></h3>
+<ul>
+<li><strong>Model</strong>: Database layer (Student, Teacher, Attendance
+models)</li>
+<li><strong>View</strong>: JSON responses (no templates, API-only)</li>
+<li><strong>Controller</strong>: Business logic (StudentController,
+TeacherController)</li>
+</ul>
+<h3 id="repository-pattern">2. <strong>Repository Pattern</strong></h3>
+<p>Models act as repositories:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Attendance {</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> getByStudent(<span class="va">$studentId</span><span class="ot">,</span> <span class="va">$limit</span> <span class="op">=</span> <span class="dv">50</span>) { ... }</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> createRecord(<span class="va">$data</span>) { ... }</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">function</span> updateStatus(<span class="va">$attendanceId</span><span class="ot">,</span> <span class="va">$status</span>) { ... }</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="singleton-pattern">3. <strong>Singleton Pattern</strong></h3>
+<p>Database connection:</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Database {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">private</span> <span class="kw">static</span> <span class="va">$instance</span><span class="ot">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> getInstance() {</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> (<span class="op">!</span><span class="kw">self</span>::<span class="va">$instance</span>) {</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>            <span class="kw">self</span>::<span class="va">$instance</span> <span class="op">=</span> <span class="kw">new</span> <span class="kw">self</span>()<span class="ot">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="kw">self</span>::<span class="va">$instance</span><span class="ot">;</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="factory-pattern">4. <strong>Factory Pattern</strong></h3>
+<p>Response handling:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Response {</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> success(<span class="va">$data</span><span class="ot">,</span> <span class="va">$message</span> <span class="op">=</span> <span class="kw">null</span>) { ... }</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> <span class="bu">error</span>(<span class="va">$message</span><span class="ot">,</span> <span class="va">$code</span> <span class="op">=</span> <span class="dv">400</span>) { ... }</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">public</span> <span class="kw">static</span> <span class="kw">function</span> validationError(<span class="va">$errors</span>) { ... }</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="strategy-pattern">5. <strong>Strategy Pattern</strong></h3>
+<p>Database abstraction (MySQL vs PostgreSQL):</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">public</span> <span class="kw">function</span> getConnection() {</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="va">$this</span>-&gt;db_type <span class="op">===</span> <span class="st">&#39;postgres&#39;</span>) {</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        <span class="va">$dsn</span> <span class="op">=</span> <span class="st">&quot;pgsql:host=</span>{<span class="va">$host</span>}<span class="st">;dbname=</span>{<span class="va">$db_name</span>}<span class="st">&quot;</span><span class="ot">;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">$dsn</span> <span class="op">=</span> <span class="st">&quot;mysql:host=</span>{<span class="va">$host</span>}<span class="st">;dbname=</span>{<span class="va">$db_name</span>}<span class="st">&quot;</span><span class="ot">;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">new</span> <span class="bu">PDO</span>(<span class="va">$dsn</span><span class="ot">,</span> <span class="va">$user</span><span class="ot">,</span> <span class="va">$pass</span>)<span class="ot">;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="configuration-deployment">Configuration &amp; Deployment</h2>
+<h3 id="environment-variables">Environment Variables</h3>
+<p><strong>.env file</strong> (local development):</p>
+<pre class="env"><code>MYSQL_HOST=localhost
+MYSQL_DATABASE=sams_db
+MYSQL_USER=root
+MYSQL_PASSWORD=
+
+FIREBASE_API_KEY=your_firebase_key
+FIREBASE_MESSAGE_SENDER_ID=your_sender_id
+
+SESSION_LIFETIME=3600
+SESSION_DOMAIN=.example.com
+CORS_ORIGIN=http://localhost:3000</code></pre>
+<h3 id="production-deployment">Production Deployment</h3>
+<p><strong>Constants</strong> (<code>config/constants.php</code>):</p>
+<div class="sourceCode" id="cb16"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Session</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;SESSION_LIFETIME&#39;</span><span class="ot">,</span> <span class="dv">3600</span>)<span class="ot">;</span>          <span class="co">// 1 hour</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;SESSION_DOMAIN&#39;</span><span class="ot">,</span> <span class="st">&#39;.sams.edu&#39;</span>)<span class="ot">;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">// Attendance</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;GPS_RADIUS_METERS&#39;</span><span class="ot">,</span> <span class="dv">50</span>)<span class="ot">;</span>           <span class="co">// GPS threshold</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;FACE_CONFIDENCE_THRESHOLD&#39;</span><span class="ot">,</span> <span class="dv">75</span>)<span class="ot">;</span>   <span class="co">// Face score threshold</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;LATE_THRESHOLD_MINUTES&#39;</span><span class="ot">,</span> <span class="dv">15</span>)<span class="ot">;</span>      <span class="co">// Late threshold</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co">// System</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;PAGINATION_LIMIT&#39;</span><span class="ot">,</span> <span class="dv">50</span>)<span class="ot">;</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="fu">define</span>(<span class="st">&#39;MAX_UPLOAD_SIZE&#39;</span><span class="ot">,</span> <span class="dv">5242880</span>)<span class="ot">;</span>        <span class="co">// 5MB</span></span></code></pre></div>
+<h3 id="error-handling">Error Handling</h3>
+<p><strong>PDO Exceptions</strong>:</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span> {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">$stmt</span> <span class="op">=</span> <span class="va">$db</span>-&gt;prepare(<span class="va">$query</span>)<span class="ot">;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">$stmt</span>-&gt;execute(<span class="va">$params</span>)<span class="ot">;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>} <span class="cf">catch</span> (<span class="bu">PDOException</span> <span class="va">$e</span>) {</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">error_log</span>(<span class="st">&#39;DB Error: &#39;</span> <span class="op">.</span> <span class="va">$e</span>-&gt;getMessage())<span class="ot">;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    Response::<span class="bu">error</span>(<span class="st">&#39;Database error&#39;</span><span class="ot">,</span> <span class="dv">500</span>)<span class="ot">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Validation Errors</strong>:</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode php"><code class="sourceCode php"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="va">$validator</span>-&gt;required(<span class="st">&#39;email&#39;</span><span class="ot">,</span> <span class="va">$data</span>[<span class="st">&#39;email&#39;</span>] <span class="op">??</span> <span class="st">&#39;&#39;</span><span class="ot">,</span> <span class="st">&#39;Email&#39;</span>)<span class="ot">;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="va">$validator</span>-&gt;hasErrors()) {</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    Response::validationError(<span class="va">$validator</span>-&gt;getErrors())<span class="ot">;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Returns: { &quot;success&quot;: false, &quot;errors&quot;: { ... } }</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<h3 id="performance-optimization">Performance Optimization</h3>
+<p><strong>Database Indexing</strong>: - Composite indexes on frequently
+queried columns - Foreign key indexes for joins - Unique indexes on
+primary identifiers</p>
+<p><strong>Query Optimization</strong>: - Prepared statements (prevent
+SQL injection) - Selective column selection (avoid SELECT *) -
+Pagination for large datasets - Join optimization for related data</p>
+<p><strong>Caching Strategies</strong>: - Session data caching -
+Settings cached in-memory - API response caching for static data</p>
+<hr />
+<h2 id="summary">Summary</h2>
+<p><strong>SAMS Backend Architecture</strong>: 1. <strong>Layered
+Architecture</strong>: Presentation → Business Logic → Data Access 2.
+<strong>Separation of Concerns</strong>: Controllers, Models, Helpers,
+Middleware 3. <strong>Database Abstraction</strong>: PDO with support
+for multiple database systems 4. <strong>Security</strong>: Session
+validation, input validation, encrypted face data 5.
+<strong>Scalability</strong>: Pagination, indexing, query optimization
+6. <strong>Maintainability</strong>: Consistent naming, DRY principles,
+helper functions</p>
+<p><strong>Key Technologies</strong>: - PHP 7.4+ with PDO - MySQL /
+PostgreSQL - Firebase Cloud Messaging - RESTful JSON API - Session-based
+Authentication</p>

@@ -13,40 +13,68 @@ if (empty($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/helpers/Response.php';
 
 $database = new Database();
 $db = $database->getConnection();
 
-// Get statistics
-$statsQuery = "SELECT 
-    COUNT(*) as total_notifications,
-    SUM(CASE WHEN is_sent = TRUE THEN 1 ELSE 0 END) as sent_count,
-    SUM(CASE WHEN is_read = TRUE THEN 1 ELSE 0 END) as read_count,
-    COUNT(DISTINCT created_by) as admins_count
-FROM notifications";
+// Get statistics - safely
+$stats = [
+    'total_notifications' => 0,
+    'sent_count' => 0,
+    'read_count' => 0,
+    'admins_count' => 0
+];
 
-$stmt = $db->prepare($statsQuery);
-$stmt->execute();
-$stats = $stmt->fetch(PDO::FETCH_ASSOC);
+$recentNotifications = [];
 
-// Get recent notifications
-$recentQuery = "SELECT n.*, u.full_name as creator_name, tu.full_name as target_name
-FROM notifications n
-LEFT JOIN users u ON n.created_by = u.id
-LEFT JOIN users tu ON n.target_user_id = tu.id
-ORDER BY n.created_at DESC
-LIMIT 10";
+// Try to get stats if notifications table exists
+if ($db) {
+    try {
+        $checkTable = $db->query("SHOW TABLES LIKE 'notifications'");
+        if ($checkTable && $checkTable->rowCount() > 0) {
+            $statsQuery = "SELECT 
+                COUNT(*) as total_notifications,
+                SUM(CASE WHEN is_sent = TRUE THEN 1 ELSE 0 END) as sent_count,
+                SUM(CASE WHEN is_read = TRUE THEN 1 ELSE 0 END) as read_count,
+                COUNT(DISTINCT created_by) as admins_count
+            FROM notifications";
 
-$stmt = $db->prepare($recentQuery);
-$stmt->execute();
-$recentNotifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $db->prepare($statsQuery);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result) {
+                $stats = $result;
+            }
+            
+            // Get recent notifications
+            $recentQuery = "SELECT n.*, u.full_name as creator_name, tu.full_name as target_name
+            FROM notifications n
+            LEFT JOIN users u ON n.created_by = u.id
+            LEFT JOIN users tu ON n.target_user_id = tu.id
+            ORDER BY n.created_at DESC
+            LIMIT 10";
+
+            $stmt = $db->prepare($recentQuery);
+            $stmt->execute();
+            $recentNotifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        // Table doesn't exist or there's an error, continue with empty data
+    }
+}
 
 // Get users for dropdown
-$usersQuery = "SELECT id, full_name, role FROM users ORDER BY full_name";
-$stmt = $db->prepare($usersQuery);
-$stmt->execute();
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$users = [];
+if ($db) {
+    try {
+        $usersQuery = "SELECT id, full_name, role FROM users ORDER BY full_name";
+        $stmt = $db->prepare($usersQuery);
+        $stmt->execute();
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Error getting users
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -109,10 +137,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background: #0052a3;
         }
         
-        .table-hover tbody tr:hover {
-            background-color: #f5f7fa;
-        }
-        
         .badge-sent {
             background: #28a745;
         }
@@ -127,13 +151,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         .badge-unread {
             background: #ffc107;
-        }
-        
-        .form-section {
-            background: white;
-            padding: 28px;
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
         }
         
         .notification-type-badge {
@@ -293,6 +310,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <!-- Recent Notifications -->
+        <?php if (!empty($recentNotifications)): ?>
         <div class="card">
             <div class="card-header bg-light">
                 <h5 class="mb-0"><i class="bi bi-list-ul"></i> Recent Notifications</h5>
@@ -312,46 +330,46 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($recentNotifications)): ?>
+                            <?php foreach ($recentNotifications as $notif): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
-                                        <i class="bi bi-inbox"></i> No notifications sent yet
+                                    <td>
+                                        <span class="notification-type-badge type-<?php echo htmlspecialchars($notif['notification_type']); ?>">
+                                            <?php echo ucwords(str_replace('_', ' ', htmlspecialchars($notif['notification_type']))); ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($notif['target_name'] ?? 'All Users'); ?></td>
+                                    <td><?php echo htmlspecialchars(substr($notif['title'], 0, 50)); ?></td>
+                                    <td><?php echo htmlspecialchars($notif['creator_name'] ?? 'System'); ?></td>
+                                    <td>
+                                        <span class="badge <?php echo $notif['is_sent'] ? 'badge-sent' : 'badge-unsent'; ?>">
+                                            <?php echo $notif['is_sent'] ? 'Sent' : 'Pending'; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $notif['is_read'] ? 'badge-read' : 'badge-unread'; ?>">
+                                            <?php echo $notif['is_read'] ? 'Read' : 'Unread'; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            <?php echo date('M d, H:i', strtotime($notif['created_at'])); ?>
+                                        </small>
                                     </td>
                                 </tr>
-                            <?php else: ?>
-                                <?php foreach ($recentNotifications as $notif): ?>
-                                    <tr>
-                                        <td>
-                                            <span class="notification-type-badge type-<?php echo htmlspecialchars($notif['notification_type']); ?>">
-                                                <?php echo ucwords(str_replace('_', ' ', htmlspecialchars($notif['notification_type']))); ?>
-                                            </span>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($notif['target_name'] ?? 'All Users'); ?></td>
-                                        <td><?php echo htmlspecialchars(substr($notif['title'], 0, 50)); ?></td>
-                                        <td><?php echo htmlspecialchars($notif['creator_name'] ?? 'System'); ?></td>
-                                        <td>
-                                            <span class="badge <?php echo $notif['is_sent'] ? 'badge-sent' : 'badge-unsent'; ?>">
-                                                <?php echo $notif['is_sent'] ? 'Sent' : 'Pending'; ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge <?php echo $notif['is_read'] ? 'badge-read' : 'badge-unread'; ?>">
-                                                <?php echo $notif['is_read'] ? 'Read' : 'Unread'; ?>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                <?php echo date('M d, H:i', strtotime($notif['created_at'])); ?>
-                                            </small>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+        <?php else: ?>
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">No notifications sent yet. Use the form above to send your first notification!</p>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Scripts -->
@@ -423,3 +441,4 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </script>
 </body>
 </html>
+

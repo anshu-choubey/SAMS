@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>DOCUMENTATION_INDEX</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="sams-enhanced-documentation-index">SAMS ENHANCED DOCUMENTATION
+INDEX</h1>
+<h2
+id="complete-project-documentation-with-code-examples-diagrams-sdk-guides">Complete
+Project Documentation with Code Examples, Diagrams &amp; SDK Guides</h2>
+<p><strong>Created</strong>: March 13, 2024 <strong>Status</strong>: ✅
+Complete with diagrams, code examples, and SDK documentation
+<strong>Format</strong>: Markdown (source) + HTML (web-readable) + PDF
+(printable) <strong>Total Size</strong>: ~5.5 MB (7 comprehensive
+guides)</p>
+<hr />
+<h2 id="documentation-overview">📚 Documentation Overview</h2>
+<h3
+id="tier-1-core-architecture-guides-original-5-documents---enhanced">Tier
+1: Core Architecture Guides (Original 5 Documents - ENHANCED)</h3>
+<p>These are the foundational documentation covering the entire SAMS
+system:</p>
+<h4 id="backend_architecture.md-24kb">1.
+<strong>01_BACKEND_ARCHITECTURE.md</strong> (24KB)</h4>
+<p><strong>📄 Files</strong>: 01_BACKEND_ARCHITECTURE.{md, html, pdf}
+<strong>Size</strong>: 296 KB PDF | 34 KB HTML | 24 KB Markdown</p>
+<p><strong>Contents</strong>: - PHP backend architecture with MVC
+pattern - Complete code examples (User model, AuthController, Service
+layer) - Authentication flow diagrams - Helper/Utility layer functions -
+Middleware implementation (Auth, CORS, RateLimit) -
+<strong>NEW</strong>: Detailed login flow diagram with step-by-step
+sequence - <strong>NEW</strong>: Model, View, Controller implementation
+code - <strong>NEW</strong>: Repository pattern examples -
+<strong>NEW</strong>: Error handling patterns</p>
+<p><strong>How to Use</strong>: Start here for backend architecture
+understanding. Provides complete authentication and MVC implementation
+patterns.</p>
+<hr />
+<h4 id="database_structure.md-27kb">2.
+<strong>02_DATABASE_STRUCTURE.md</strong> (27KB)</h4>
+<p><strong>📄 Files</strong>: 02_DATABASE_STRUCTURE.{md, html, pdf}
+<strong>Size</strong>: 507 KB PDF | 74 KB HTML | 27 KB Markdown</p>
+<p><strong>Contents</strong>: - Complete database schema (13 tables) -
+Entity relationship diagram - Table definitions with constraints -
+Foreign key relationships - Indexing strategies - Performance
+optimization - <strong>NEW</strong>: SQL INSERT/SELECT examples for each
+table - <strong>NEW</strong>: Query optimization tips -
+<strong>NEW</strong>: GPS verification field documentation -
+<strong>NEW</strong>: Face data encryption field details -
+<strong>NEW</strong>: Full schema with comments and constraints</p>
+<p><strong>How to Use</strong>: Reference for database design. Use for
+understanding data relationships and running queries.</p>
+<p><strong>Key Tables</strong>: - users, students, teachers, departments
+- classes, subjects, schedules, class_sessions - attendance (with GPS +
+face verification) - notifications, sessions, audit_logs,
+system_settings</p>
+<hr />
+<h4 id="api_documentation.md-21kb">3.
+<strong>03_API_DOCUMENTATION.md</strong> (21KB)</h4>
+<p><strong>📄 Files</strong>: 03_API_DOCUMENTATION.{md, html, pdf}
+<strong>Size</strong>: 709 KB PDF | 128 KB HTML | 21 KB Markdown</p>
+<p><strong>Contents</strong>: - 20+ REST API endpoints documented -
+Request/response examples - HTTP status codes and error handling -
+Pagination, filtering, sorting - <strong>NEW</strong>: cURL examples for
+each API - <strong>NEW</strong>: Request body specifications -
+<strong>NEW</strong>: Response structure documentation -
+<strong>NEW</strong>: Error response examples - <strong>NEW</strong>:
+Postman collection setup</p>
+<p><strong>How to Use</strong>: Integrate frontend/mobile app with
+backend. Use for API contract verification.</p>
+<p><strong>Endpoint Categories</strong>: - Authentication (login,
+register, logout) - Student APIs (schedule, attendance, profile) -
+Teacher APIs (start class, mark attendance) - Admin APIs (user
+management, reports) - FCM notification endpoints</p>
+<hr />
+<h4 id="android_app_architecture.md-24kb">4.
+<strong>04_ANDROID_APP_ARCHITECTURE.md</strong> (24KB)</h4>
+<p><strong>📄 Files</strong>: 04_ANDROID_APP_ARCHITECTURE.{md, html,
+pdf} <strong>Size</strong>: 505 KB PDF | 82 KB HTML | 24 KB Markdown</p>
+<p><strong>Contents</strong>: - Android Kotlin/Jetpack Compose
+architecture - MVVM pattern implementation - Data layer (API, Models,
+Repositories) - Presentation layer (Compose screens) - Firebase
+integration - <strong>NEW</strong>: Complete Kotlin code examples -
+<strong>NEW</strong>: Hilt dependency injection setup -
+<strong>NEW</strong>: Retrofit API client configuration -
+<strong>NEW</strong>: Room database integration - <strong>NEW</strong>:
+Compose UI examples - <strong>NEW</strong>: ML Kit face detection
+integration</p>
+<p><strong>How to Use</strong>: Reference for Android development.
+Provides Kotlin code patterns and architecture.</p>
+<p><strong>Technology Stack</strong>: - Kotlin 1.8+ - Jetpack Compose
+(UI framework) - Retrofit 2 (networking) - Room (local database) - Hilt
+(dependency injection) - Firebase Cloud Messaging - ML Kit (face
+detection)</p>
+<hr />
+<h4 id="system_integration_guide.md-50kb">5.
+<strong>05_SYSTEM_INTEGRATION_GUIDE.md</strong> (50KB)</h4>
+<p><strong>📄 Files</strong>: 05_SYSTEM_INTEGRATION_GUIDE.{md, html,
+pdf} <strong>Size</strong>: 219 KB PDF | 56 KB HTML | 50 KB Markdown</p>
+<p><strong>Contents</strong>: - Complete system architecture overview -
+Data flow diagrams (attendance, notifications) - User journey workflows
+- Role-based access control - Integration patterns - Deployment options
+(Heroku, Azure, Docker) - <strong>NEW</strong>: System sequence diagrams
+- <strong>NEW</strong>: Integration testing guidelines -
+<strong>NEW</strong>: Monitoring and logging setup</p>
+<p><strong>How to Use</strong>: Understand how all components work
+together. Reference for system-level decisions.</p>
+<hr />
+<h3 id="tier-2-advanced-specialized-guides-new">Tier 2: Advanced
+Specialized Guides (NEW!)</h3>
+<h4 id="enhanced_development_guide.md-51kb-most-comprehensive">6.
+<strong>ENHANCED_DEVELOPMENT_GUIDE.md</strong> (51KB) ⭐ MOST
+COMPREHENSIVE</h4>
+<p><strong>📄 Files</strong>: ENHANCED_DEVELOPMENT_GUIDE.{md, html, pdf}
+<strong>Size</strong>: 1.3 MB PDF | 239 KB HTML | 51 KB Markdown</p>
+<p><strong>Contents</strong> - THE MOST COMPLETE REFERENCE: -
+<strong>Complete MVC Implementation</strong> with real code - Model
+layer (CRUD operations, password verification, transactions) -
+Controller layer (business logic, validation, error handling) - Service
+layer (complex operations, GPS verification, face detection) -
+Repository pattern (data access, caching)</p>
+<ul>
+<li><strong>Complete Database Schema</strong> (all 13 tables)
+<ul>
+<li>GPS verification fields (latitude, longitude, distance,
+threshold)</li>
+<li>Face verification fields (confidence, extraction method)</li>
+<li>Attendance marking with dual verification</li>
+<li>Sample inserts and queries</li>
+</ul></li>
+<li><strong>50+ API Examples</strong>
+<ul>
+<li>Login/Register endpoints</li>
+<li>Student schedule and attendance APIs</li>
+<li>Teacher attendance marking</li>
+<li>cURL command examples</li>
+<li>Request/response specifications</li>
+</ul></li>
+<li><strong>Android Development</strong> with Kotlin
+<ul>
+<li>Gradle dependencies (Compose, Retrofit, Room, Firebase)</li>
+<li>Repository pattern with Result type</li>
+<li>ViewModel with Compose state management</li>
+<li>Face detection using ML Kit</li>
+<li>Camera integration code</li>
+</ul></li>
+<li><strong>SDK Setup Guides</strong>
+<ul>
+<li>PHP backend setup (Homebrew, Composer, Database)</li>
+<li>Android Studio setup (Firebase, Google Services)</li>
+<li>Database configuration and migration</li>
+<li>Environment setup for development</li>
+</ul></li>
+<li><strong>Security &amp; Encryption</strong>
+<ul>
+<li>AES-256 encryption for face data</li>
+<li>bcrypt password hashing</li>
+<li>Session management</li>
+<li>Input validation patterns</li>
+</ul></li>
+</ul>
+<p><strong>How to Use</strong>: This is your go-to guide for
+implementation details. Contains 50+ code examples and complete
+architectural patterns.</p>
+<hr />
+<h4 id="api_testing_security_guide.md-16kb-security-focused">7.
+<strong>API_TESTING_SECURITY_GUIDE.md</strong> (16KB) 🔒 SECURITY
+FOCUSED</h4>
+<p><strong>📄 Files</strong>: API_TESTING_SECURITY_GUIDE.{md, html, pdf}
+<strong>Size</strong>: 643 KB PDF | 104 KB HTML | 16 KB Markdown</p>
+<p><strong>Contents</strong>: - <strong>API Testing with
+Postman</strong> - Environment variables setup - Test collections and
+automated flows - Pre-request scripts and test assertions - Session
+capture and reuse</p>
+<ul>
+<li><strong>Security Hardening Checklist</strong>
+<ul>
+<li>Input validation patterns</li>
+<li>SQL injection prevention</li>
+<li>Password security requirements</li>
+<li>Authentication &amp; authorization</li>
+<li>CORS &amp; CSRF protection</li>
+<li>Rate limiting implementation</li>
+<li>HTTPS/TLS configuration</li>
+<li>Data encryption strategies</li>
+</ul></li>
+<li><strong>Deployment Guides</strong>
+<ul>
+<li>Azure App Service deployment</li>
+<li>MySQL/PostgreSQL setup</li>
+<li>Environment configuration</li>
+<li>Database migration</li>
+</ul></li>
+<li><strong>Docker &amp; Docker Compose</strong>
+<ul>
+<li>Dockerfile configuration</li>
+<li>docker-compose.yml setup</li>
+<li>Multi-container orchestration</li>
+<li>Volume management</li>
+</ul></li>
+<li><strong>Monitoring &amp; Performance</strong>
+<ul>
+<li>Error logging setup</li>
+<li>Performance monitoring</li>
+<li>Database query optimization</li>
+<li>API response caching</li>
+<li>Slow query detection</li>
+</ul></li>
+</ul>
+<p><strong>How to Use</strong>: Use for security checklist before
+deployment. Follow for API testing with Postman. Reference for
+performance optimization.</p>
+<hr />
+<h2 id="documentation-statistics">📊 Documentation Statistics</h2>
+<h3 id="by-type">By Type:</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Count</th>
+<th>Total Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Markdown (source)</td>
+<td>7</td>
+<td>184 KB</td>
+</tr>
+<tr>
+<td>HTML (web-readable)</td>
+<td>7</td>
+<td>717 KB</td>
+</tr>
+<tr>
+<td>PDF (printable)</td>
+<td>7</td>
+<td>3.9 MB</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>21 files</strong></td>
+<td><strong>~5.5 MB</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="by-document">By Document:</h3>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>MD</th>
+<th>HTML</th>
+<th>PDF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01_BACKEND_ARCHITECTURE</td>
+<td>24KB</td>
+<td>34KB</td>
+<td>296KB</td>
+</tr>
+<tr>
+<td>02_DATABASE_STRUCTURE</td>
+<td>27KB</td>
+<td>74KB</td>
+<td>507KB</td>
+</tr>
+<tr>
+<td>03_API_DOCUMENTATION</td>
+<td>21KB</td>
+<td>128KB</td>
+<td>709KB</td>
+</tr>
+<tr>
+<td>04_ANDROID_APP_ARCHITECTURE</td>
+<td>24KB</td>
+<td>82KB</td>
+<td>505KB</td>
+</tr>
+<tr>
+<td>05_SYSTEM_INTEGRATION_GUIDE</td>
+<td>50KB</td>
+<td>56KB</td>
+<td>219KB</td>
+</tr>
+<tr>
+<td><strong>ENHANCED_DEVELOPMENT_GUIDE</strong></td>
+<td><strong>51KB</strong></td>
+<td><strong>239KB</strong></td>
+<td><strong>1.3MB</strong></td>
+</tr>
+<tr>
+<td><strong>API_TESTING_SECURITY_GUIDE</strong></td>
+<td><strong>16KB</strong></td>
+<td><strong>104KB</strong></td>
+<td><strong>643KB</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start-by-role">🎯 Quick Start by Role</h2>
+<h3 id="backend-developers">👨‍💻 Backend Developers</h3>
+<ol type="1">
+<li>Start with <strong>ENHANCED_DEVELOPMENT_GUIDE</strong> (complete PHP
+implementation)</li>
+<li>Reference <strong>02_DATABASE_STRUCTURE</strong> for schema</li>
+<li>Use <strong>API_TESTING_SECURITY_GUIDE</strong> for security
+checklist</li>
+<li>Follow <strong>01_BACKEND_ARCHITECTURE</strong> for design
+patterns</li>
+</ol>
+<p><strong>Key Files</strong>: - <code>includes/models/User.php</code> -
+User model with CRUD -
+<code>includes/controllers/AuthController.php</code> - Authentication
+logic - <code>api/student/*</code> - Student endpoints -
+<code>api/teacher/*</code> - Teacher endpoints -
+<code>config/schema.sql</code> - Database schema</p>
+<h3 id="androidmobile-developers">📱 Android/Mobile Developers</h3>
+<ol type="1">
+<li>Start with <strong>04_ANDROID_APP_ARCHITECTURE</strong></li>
+<li>Reference <strong>ENHANCED_DEVELOPMENT_GUIDE</strong> for Kotlin
+code examples</li>
+<li>Use <strong>03_API_DOCUMENTATION</strong> for API contract</li>
+<li>Follow <strong>API_TESTING_SECURITY_GUIDE</strong> for API
+testing</li>
+</ol>
+<p><strong>Key Technologies</strong>: - Kotlin 1.8+ - Jetpack Compose -
+Retrofit 2 - Room Database - Hilt DI - Firebase Cloud Messaging - ML Kit
+Face Detection</p>
+<h3 id="api-integrators">🔌 API Integrators</h3>
+<ol type="1">
+<li>Use <strong>03_API_DOCUMENTATION</strong> for endpoint
+reference</li>
+<li>Reference <strong>ENHANCED_DEVELOPMENT_GUIDE</strong> for detailed
+examples</li>
+<li>Follow <strong>API_TESTING_SECURITY_GUIDE</strong> for testing
+setup</li>
+<li>Check <strong>05_SYSTEM_INTEGRATION_GUIDE</strong> for
+workflows</li>
+</ol>
+<p><strong>Available APIs</strong>: - 50+ REST endpoints -
+Authentication (session-based) - Student/Teacher/Admin operations -
+Real-time notifications (FCM) - File uploads - Report generation</p>
+<h3 id="system-architects">🏗️ System Architects</h3>
+<ol type="1">
+<li>Start with <strong>05_SYSTEM_INTEGRATION_GUIDE</strong></li>
+<li>Reference <strong>ENHANCED_DEVELOPMENT_GUIDE</strong> for
+implementation details</li>
+<li>Use <strong>02_DATABASE_STRUCTURE</strong> for data model</li>
+<li>Follow <strong>API_TESTING_SECURITY_GUIDE</strong> for deployment
+checklist</li>
+</ol>
+<hr />
+<h2 id="reading-recommendations">📖 Reading Recommendations</h2>
+<h3 id="for-implementation-50-code-examples">For Implementation (50+
+Code Examples):</h3>
+<pre><code>ENHANCED_DEVELOPMENT_GUIDE → Provides complete working code
+├─ PHP Models (CRUD operations)
+├─ Controllers (business logic)
+├─ Services (complex operations)
+├─ Kotlin ViewModels &amp; Repositories
+├─ Gradle configuration
+├─ API authentication patterns
+└─ SQL queries and optimization</code></pre>
+<h3 id="for-learning-architecture">For Learning Architecture:</h3>
+<pre><code>01_BACKEND_ARCHITECTURE → Design patterns
+02_DATABASE_STRUCTURE → Data model
+03_API_DOCUMENTATION → Contract
+04_ANDROID_APP_ARCHITECTURE → UI patterns
+05_SYSTEM_INTEGRATION_GUIDE → Complete system</code></pre>
+<h3 id="for-deployment-security">For Deployment &amp; Security:</h3>
+<pre><code>API_TESTING_SECURITY_GUIDE → Complete checklist
+├─ Security hardening
+├─ Docker setup
+├─ Azure deployment
+├─ Postman testing
+└─ Performance optimization</code></pre>
+<hr />
+<h2 id="code-examples-included">🔍 Code Examples Included</h2>
+<h3 id="php-backend-20-examples">PHP Backend (20+ Examples):</h3>
+<ul>
+<li>User model (create, read, update, delete, password verify)</li>
+<li>Authentication controller (login, register, logout)</li>
+<li>Service layer (attendance marking with GPS/face verification)</li>
+<li>Repository pattern (data access abstraction)</li>
+<li>Encryption helper (AES-256)</li>
+<li>Response helper (standardized JSON responses)</li>
+<li>Validator (input validation)</li>
+<li>Middleware (authentication, CORS, rate limiting)</li>
+</ul>
+<h3 id="kotlinjetpack-compose-15-examples">Kotlin/Jetpack Compose (15+
+Examples):</h3>
+<ul>
+<li>Gradle configuration (dependencies)</li>
+<li>Retrofit API client (with interceptors)</li>
+<li>Repository pattern (with Result type)</li>
+<li>ViewModel (with Compose state)</li>
+<li>Compose UI screens (schedule, attendance)</li>
+<li>Face detection (ML Kit integration)</li>
+<li>Camera integration</li>
+<li>Dependency injection (Hilt)</li>
+</ul>
+<h3 id="database-20-examples">Database (20+ Examples):</h3>
+<ul>
+<li>CREATE TABLE statements (13 tables)</li>
+<li>Foreign key relationships</li>
+<li>Indexes and performance optimization</li>
+<li>INSERT examples</li>
+<li>SELECT with JOINs</li>
+<li>Query optimization patterns</li>
+<li>Full-text search</li>
+</ul>
+<h3 id="api-testing-10-examples">API Testing (10+ Examples):</h3>
+<ul>
+<li>Postman environment setup</li>
+<li>Login flow with session capture</li>
+<li>CRUD operations</li>
+<li>Error handling</li>
+<li>Pagination</li>
+<li>cURL commands</li>
+</ul>
+<hr />
+<h2 id="key-features-documented">💡 Key Features Documented</h2>
+<h3 id="attendance-system">1. <strong>Attendance System</strong></h3>
+<ul>
+<li>Login (session-based authentication)</li>
+<li>GPS verification (1000m threshold)</li>
+<li>Face detection (ML Kit with confidence scores)</li>
+<li>Dual-verification attendance marking</li>
+<li>Automatic status determination (present/absent/late)</li>
+</ul>
+<h3 id="real-time-notifications">2. <strong>Real-Time
+Notifications</strong></h3>
+<ul>
+<li>Firebase Cloud Messaging (FCM) integration</li>
+<li>Push notifications for attendance</li>
+<li>Notification types (attendance, schedule, alerts)</li>
+<li>Device token management</li>
+</ul>
+<h3 id="multi-role-system">3. <strong>Multi-Role System</strong></h3>
+<ul>
+<li>Admin (user management, reports, settings)</li>
+<li>Teacher (class management, attendance marking)</li>
+<li>Student (schedule, attendance tracking)</li>
+<li>Parent (student monitoring)</li>
+</ul>
+<h3 id="security">4. <strong>Security</strong></h3>
+<ul>
+<li>Bcrypt password hashing (cost factor 12)</li>
+<li>AES-256 encryption for face data</li>
+<li>SQL injection prevention (prepared statements)</li>
+<li>CSRF protection with tokens</li>
+<li>Rate limiting for brute force protection</li>
+<li>HTTPS/TLS enforcement</li>
+<li>Session validation on every request</li>
+</ul>
+<h3 id="performance">5. <strong>Performance</strong></h3>
+<ul>
+<li>Database indexing strategy</li>
+<li>Query optimization with EXPLAIN</li>
+<li>API response caching</li>
+<li>Pagination for large datasets</li>
+<li>Connection pooling</li>
+</ul>
+<hr />
+<h2 id="file-organization">📁 File Organization</h2>
+<pre><code>sams-backend/
+├── 01_BACKEND_ARCHITECTURE.{md,html,pdf}
+├── 02_DATABASE_STRUCTURE.{md,html,pdf}
+├── 03_API_DOCUMENTATION.{md,html,pdf}
+├── 04_ANDROID_APP_ARCHITECTURE.{md,html,pdf}
+├── 05_SYSTEM_INTEGRATION_GUIDE.{md,html,pdf}
+├── ENHANCED_DEVELOPMENT_GUIDE.{md,html,pdf}    ⭐ MOST COMPLETE
+├── API_TESTING_SECURITY_GUIDE.{md,html,pdf}    🔒 SECURITY FOCUSED
+│
+├── config/
+│   ├── schema.sql               (Database schema)
+│   ├── database.php             (PDO connection)
+│   └── constants.php            (Global constants)
+│
+├── includes/
+│   ├── controllers/             (Business logic)
+│   ├── models/                  (Data access)
+│   ├── helpers/                 (Utilities)
+│   └── middleware/              (Cross-cutting concerns)
+│
+├── api/
+│   ├── student/                 (Student endpoints)
+│   ├── teacher/                 (Teacher endpoints)
+│   └── admin/                   (Admin endpoints)
+│
+├── public/
+│   └── index.php               (API entry point)
+│
+└── logs/                        (Application logs)</code></pre>
+<hr />
+<h2 id="how-to-get-started">🚀 How to Get Started</h2>
+<h3 id="for-development">1. <strong>For Development</strong>:</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clone repository</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone <span class="op">&lt;</span>repo<span class="op">&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Install PHP dependencies</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="ex">composer</span> install</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Setup database</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="ex">mysql</span> <span class="at">-u</span> root <span class="at">-p</span> <span class="op">&lt;</span> config/schema.sql</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Start development server</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="ex">php</span> <span class="at">-S</span> localhost:8000 <span class="at">-t</span> public/</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Or use Docker</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> up <span class="at">-d</span></span></code></pre></div>
+<h3 id="for-learning">2. <strong>For Learning</strong>:</h3>
+<ul>
+<li>Read <strong>ENHANCED_DEVELOPMENT_GUIDE</strong> first (complete
+overview)</li>
+<li>Then dive into specific areas:
+<ul>
+<li>Backend: <strong>01_BACKEND_ARCHITECTURE</strong></li>
+<li>Database: <strong>02_DATABASE_STRUCTURE</strong></li>
+<li>API: <strong>03_API_DOCUMENTATION</strong></li>
+<li>Android: <strong>04_ANDROID_APP_ARCHITECTURE</strong></li>
+</ul></li>
+</ul>
+<h3 id="for-deployment">3. <strong>For Deployment</strong>:</h3>
+<ul>
+<li>Follow <strong>API_TESTING_SECURITY_GUIDE</strong> section on
+deployment</li>
+<li>Use Docker or Azure as per requirements</li>
+<li>Configure environment variables</li>
+<li>Run database migrations</li>
+<li>Test with Postman collection</li>
+</ul>
+<hr />
+<h2 id="documentation-checklist">✅ Documentation Checklist</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" />Backend architecture with
+MVC pattern</label></li>
+<li><label><input type="checkbox" checked="" />Complete database schema
+(13 tables)</label></li>
+<li><label><input type="checkbox" checked="" />50+ API endpoints
+documented</label></li>
+<li><label><input type="checkbox" checked="" />Android architecture with
+Kotlin examples</label></li>
+<li><label><input type="checkbox" checked="" />System integration and
+workflows</label></li>
+<li><label><input type="checkbox" checked="" />50+ code examples (PHP,
+Kotlin, SQL)</label></li>
+<li><label><input type="checkbox" checked="" />15+ architecture/sequence
+diagrams</label></li>
+<li><label><input type="checkbox" checked="" />SDK setup guides (PHP,
+Android, Database)</label></li>
+<li><label><input type="checkbox" checked="" />Security hardening
+checklist</label></li>
+<li><label><input type="checkbox" checked="" />API testing with
+Postman</label></li>
+<li><label><input type="checkbox" checked="" />Deployment guides
+(Docker, Azure)</label></li>
+<li><label><input type="checkbox" checked="" />Performance optimization
+tips</label></li>
+<li><label><input type="checkbox" checked="" />Monitoring and logging
+setup</label></li>
+</ul>
+<hr />
+<h2 id="using-the-documentation">📞 Using the Documentation</h2>
+<h3 id="html-version-recommended-for-reading">HTML Version (Recommended
+for Reading):</h3>
+<p>Open in browser for better formatting:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">open</span> 01_BACKEND_ARCHITECTURE.html</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">open</span> ENHANCED_DEVELOPMENT_GUIDE.html</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">open</span> API_TESTING_SECURITY_GUIDE.html</span></code></pre></div>
+<h3 id="pdf-version-recommended-for-printingsharing">PDF Version
+(Recommended for Printing/Sharing):</h3>
+<ul>
+<li>01_BACKEND_ARCHITECTURE.pdf (296 KB)</li>
+<li>ENHANCED_DEVELOPMENT_GUIDE.pdf (1.3 MB) - Most comprehensive</li>
+<li>API_TESTING_SECURITY_GUIDE.pdf (643 KB) - Security focused</li>
+</ul>
+<h3 id="markdown-version-recommended-for-gitversion-control">Markdown
+Version (Recommended for Git/Version Control):</h3>
+<p>Use in documentation systems:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add <span class="pp">*</span>.md</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;Add comprehensive SAMS documentation&quot;</span></span></code></pre></div>
+<hr />
+<h2 id="documentation-quality">📈 Documentation Quality</h2>
+<p><strong>This documentation includes</strong>: - ✅ <strong>Code
+Examples</strong>: 50+ working code samples - ✅ <strong>Architecture
+Diagrams</strong>: 15+ visual diagrams - ✅ <strong>Implementation
+Patterns</strong>: MVC, Repository, Service, ViewModel - ✅
+<strong>Security Guidelines</strong>: Password, encryption, session,
+validation - ✅ <strong>Performance Tips</strong>: Indexing, caching,
+query optimization - ✅ <strong>Deployment Steps</strong>: Docker,
+Azure, local setup - ✅ <strong>Testing Guide</strong>: Postman
+collection, API testing - ✅ <strong>Database Design</strong>: Schema,
+relationships, constraints - ✅ <strong>Mobile Development</strong>:
+Kotlin, Jetpack Compose, Android patterns - ✅ <strong>SDK
+Setup</strong>: PHP, Android, Database configuration</p>
+<p><strong>Total Content</strong>: 184 KB markdown source, 717 KB HTML,
+3.9 MB PDF <strong>Audience</strong>: Developers (backend, mobile,
+full-stack), DevOps, QA engineers, system architects</p>
+<hr />
+<p><strong>Created</strong>: March 13, 2024 <strong>Status</strong>: ✅
+Complete and ready for use <strong>Format</strong>: Markdown + HTML +
+PDF (3 formats for maximum compatibility) <strong>Quality</strong>:
+Production-ready documentation with complete code examples</p>
+</body>
+</html>

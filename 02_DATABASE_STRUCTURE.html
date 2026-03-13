@@ -1,0 +1,668 @@
+<h1 id="database-structure">2. DATABASE STRUCTURE</h1>
+<h2
+id="sams-student-attendance-management-system---complete-database-design">SAMS
+(Student Attendance Management System) - Complete Database Design</h2>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#database-overview">Database Overview</a></li>
+<li><a href="#entity-relationship-diagram">Entity Relationship
+Diagram</a></li>
+<li><a href="#table-definitions">Table Definitions</a></li>
+<li><a href="#data-types--constraints">Data Types &amp;
+Constraints</a></li>
+<li><a href="#relationships--foreign-keys">Relationships &amp; Foreign
+Keys</a></li>
+<li><a href="#indexes--performance">Indexes &amp; Performance</a></li>
+<li><a href="#sample-data-flow">Sample Data Flow</a></li>
+</ol>
+<hr />
+<h2 id="database-overview">Database Overview</h2>
+<p><strong>Database Name</strong>: <code>sams_db</code>
+<strong>Character Set</strong>: utf8mb4 (supports emoji &amp; special
+characters) <strong>Collation</strong>: utf8mb4_unicode_ci
+(case-insensitive) <strong>Engine</strong>: InnoDB (transactions,
+foreign keys)</p>
+<p><strong>Tables</strong>: 13 core tables <strong>Total
+Entities</strong>: Users, Students, Teachers, Departments, Subjects,
+Schedules, Attendance, FCM Tokens, Notifications, System Settings,
+Sessions, Audit Logs</p>
+<hr />
+<h2 id="entity-relationship-diagram">Entity Relationship Diagram</h2>
+<pre><code>┌─────────────────┐
+│     USERS       │ (Base user table)
+│ (Admin,Teacher, │
+│    Student)     │
+└────────┬────────┘
+         │
+    ┌────┴────┬──────────┬─────────┐
+    │          │          │         │
+    ▼          ▼          ▼         ▼
+┌─────────┐ ┌──────────┐ ┌────────┐ ┌────────────┐
+│ STUDENTS │ │ TEACHERS │ │ DEPARTMENTS │ SESSIONS │
+│          │ │          │ │          │ │          │
+└─────────┘ └──────────┘ └────────┘ └────────────┘
+    │            │           ▲           
+    │            │           │           
+    └────┬───────┘───────────┘           
+         │                               
+         ▼                               
+  ┌──────────────────┐                  
+  │ TEACHER ASSIGNMENTS │ (Many-to-many: Teacher-Subject)
+  │                  │
+  └────────┬─────────┘
+           │
+      ┌────┴──────┐
+      │           │
+      ▼           ▼
+  ┌────────┐  ┌──────────────┐
+  │SCHEDULES│  │SUBJECTS      │
+  │        │  │              │
+  └───┬────┘  └──────────────┘
+      │
+      ├────────────────┬─────────────────┐
+      │                │                 │
+      ▼                ▼                 ▼
+┌─────────────┐  ┌──────────────┐  ┌───────────┐
+│ATTENDANCE   │  │TEACHER_LOCATIONS│ │SCHEDULES │
+│(GPS+Face)   │  │(Active Sessions) │           │
+└─────────────┘  └──────────────────┘           │
+      │                                         │
+      └─────────────────────────────────────────┘
+
+┌──────────────┐  ┌─────────────────┐  ┌──────────────────┐
+│FCM_TOKENS    │  │NOTIFICATIONS    │  │LOGIN_ATTEMPTS    │
+│(Push notify) │  │(System alerts)  │  │(Security audit)  │
+└──────────────┘  └─────────────────┘  └──────────────────┘
+
+┌──────────────────┐  ┌──────────────────┐
+│AUDIT_LOGS        │  │SYSTEM_SETTINGS   │
+│(Compliance)      │  │(Configuration)   │
+└──────────────────┘  └──────────────────┘</code></pre>
+<hr />
+<h2 id="table-definitions">Table Definitions</h2>
+<h3 id="users-table-base-user-table">1. USERS Table (Base User
+Table)</h3>
+<p><strong>Purpose</strong>: Store all users (Admin, Teacher, Student)
+<strong>Rows</strong>: Auto-increment, ~500-1000 expected</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> users (</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    full_name <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    email <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    password_hash <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,        <span class="co">-- bcrypt SHA-256</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">role</span> ENUM(<span class="st">&#39;admin&#39;</span>, <span class="st">&#39;teacher&#39;</span>, <span class="st">&#39;student&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    phone <span class="dt">VARCHAR</span>(<span class="dv">15</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    profile_image <span class="dt">VARCHAR</span>(<span class="dv">255</span>),                <span class="co">-- URL to profile photo</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,            <span class="co">-- Account status</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    last_login <span class="dt">TIMESTAMP</span> <span class="kw">NULL</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_email (email),</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_role (<span class="kw">role</span>),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Columns Explanation</strong>: - <code>id</code>: Unique user
+identifier - <code>email</code>: Login email (unique within system) -
+<code>password_hash</code>: Hashed password (bcrypt) -
+<code>role</code>: User type (determines access permissions) -
+<code>profile_image</code>: URL to profile photo stored in
+<code>/uploads/</code> - <code>is_active</code>: Soft delete (account
+deactivation) - <code>last_login</code>: Track login activity for
+reports</p>
+<hr />
+<h3 id="departments-table">2. DEPARTMENTS Table</h3>
+<p><strong>Purpose</strong>: Store academic departments
+<strong>Rows</strong>: 5-20 per institution</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> departments (</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    name <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,                <span class="co">-- e.g., &quot;Computer Science&quot;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    code <span class="dt">VARCHAR</span>(<span class="dv">20</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,          <span class="co">-- e.g., &quot;CSE&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    description TEXT,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    hod_id <span class="dt">INT</span>,                                <span class="co">-- Head of Department</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (hod_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">SET</span> <span class="kw">NULL</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_code (code),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h3 id="subjects-table">3. SUBJECTS Table</h3>
+<p><strong>Purpose</strong>: Store academic subjects/courses
+<strong>Rows</strong>: 50-200 per institution</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> subjects (</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    name <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,                <span class="co">-- e.g., &quot;Data Structures&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    code <span class="dt">VARCHAR</span>(<span class="dv">20</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,          <span class="co">-- e.g., &quot;CS201&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    department_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    credits <span class="dt">INT</span> <span class="kw">DEFAULT</span> <span class="dv">3</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    semester <span class="dt">INT</span>,                              <span class="co">-- Semester level</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    description TEXT,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_department (department_id),</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_code (code),</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_semester (semester),</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h3 id="students-table">4. STUDENTS Table</h3>
+<p><strong>Purpose</strong>: Store student-specific information
+<strong>Rows</strong>: 1000-5000 per institution</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> students (</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    user_id <span class="dt">INT</span> <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,               <span class="co">-- Reference to users table</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    roll_number <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,   <span class="co">-- e.g., &quot;CSE-001-2024&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    department_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    semester <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    section <span class="dt">VARCHAR</span>(<span class="dv">10</span>),                       <span class="co">-- e.g., &quot;A&quot;, &quot;B&quot;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    batch_year <span class="dt">INT</span>,                            <span class="co">-- e.g., 2024</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    admission_date <span class="dt">DATE</span>,</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    face_registered <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,     <span class="co">-- Face registration status</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    face_data TEXT,                            <span class="co">-- Encrypted AES-256 face embedding</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    face_photo LONGBLOB,                       <span class="co">-- Base64 encoded face photo</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    face_registration_date <span class="dt">TIMESTAMP</span> <span class="kw">NULL</span>,</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_roll_number (roll_number),</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_department_semester (department_id, semester),</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_section (section),</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_face_registered (face_registered)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Face Registration</strong>: - <code>face_registered</code>:
+Boolean flag indicating face is registered - <code>face_data</code>:
+Encrypted facial embedding (512-dim vector) using AES-256 -
+<code>face_photo</code>: Base64-encoded profile photo (binary data) -
+Used for ML Kit face detection in Android app</p>
+<hr />
+<h3 id="teachers-table">5. TEACHERS Table</h3>
+<p><strong>Purpose</strong>: Store teacher-specific information
+<strong>Rows</strong>: 50-200 per institution</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> teachers (</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    user_id <span class="dt">INT</span> <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    employee_id <span class="dt">VARCHAR</span>(<span class="dv">50</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,   <span class="co">-- e.g., &quot;EMP-001&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    primary_department_id <span class="dt">INT</span>,                 <span class="co">-- Main department</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    designation <span class="dt">VARCHAR</span>(<span class="dv">100</span>),                  <span class="co">-- e.g., &quot;Assistant Professor&quot;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    qualification <span class="dt">VARCHAR</span>(<span class="dv">255</span>),                <span class="co">-- e.g., &quot;B.Tech, M.Tech, PhD&quot;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    joining_date <span class="dt">DATE</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (primary_department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">SET</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_employee_id (employee_id),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_department (primary_department_id)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h3 id="teacher_assignments-table">6. TEACHER_ASSIGNMENTS Table</h3>
+<p><strong>Purpose</strong>: Many-to-many relationship between Teachers
+and Subjects <strong>Rows</strong>: 200-1000 (depends on courses
+taught)</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> teacher_assignments (</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    teacher_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    subject_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    department_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    section <span class="dt">VARCHAR</span>(<span class="dv">10</span>),                       <span class="co">-- e.g., &quot;A&quot;, &quot;B&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    academic_year <span class="dt">VARCHAR</span>(<span class="dv">20</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,        <span class="co">-- e.g., &quot;2024-25&quot;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    semester <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (teacher_id) <span class="kw">REFERENCES</span> teachers(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (subject_id) <span class="kw">REFERENCES</span> subjects(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">UNIQUE</span> <span class="kw">KEY</span> unique_assignment (teacher_id, subject_id, department_id, section, semester, academic_year),</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_teacher (teacher_id),</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_subject (subject_id),</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_department (department_id),</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_academic_year (academic_year),</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Purpose</strong>: Handles multi-branch support where a
+teacher teaches same subject in multiple sections/departments</p>
+<hr />
+<h3 id="schedules-table">7. SCHEDULES Table</h3>
+<p><strong>Purpose</strong>: Store class timetable
+<strong>Rows</strong>: 500-2000 (multiple sessions per day)</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> schedules (</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    assignment_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,                <span class="co">-- Links to teacher_assignments</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    day_of_week ENUM(<span class="st">&#39;Monday&#39;</span>,<span class="st">&#39;Tuesday&#39;</span>,<span class="st">&#39;Wednesday&#39;</span>,<span class="st">&#39;Thursday&#39;</span>,<span class="st">&#39;Friday&#39;</span>,<span class="st">&#39;Saturday&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    start_time <span class="dt">TIME</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,                  <span class="co">-- e.g., &quot;09:00:00&quot;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    end_time <span class="dt">TIME</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    classroom <span class="dt">VARCHAR</span>(<span class="dv">50</span>),                     <span class="co">-- e.g., &quot;101&quot;, &quot;Lab-A&quot;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    building <span class="dt">VARCHAR</span>(<span class="dv">50</span>),                      <span class="co">-- e.g., &quot;Building-A&quot;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (assignment_id) <span class="kw">REFERENCES</span> teacher_assignments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_assignment (assignment_id),</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_day_time (day_of_week, start_time),</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Data Format</strong>: - One row per time slot - Example: CSE
+Sem-2, “Data Structures”, Teacher “John”, Monday 9:00-10:00, Building-A,
+Room 101</p>
+<hr />
+<h3 id="teacher_locations-table">8. TEACHER_LOCATIONS Table</h3>
+<p><strong>Purpose</strong>: Store active teacher location during class
+(GPS coordinates) <strong>Rows</strong>: 100-500 per day (depends on
+active classes)</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> teacher_locations (</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    teacher_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    schedule_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    assignment_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    department_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    latitude <span class="dt">DECIMAL</span>(<span class="dv">10</span>, <span class="dv">8</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,          <span class="co">-- e.g., 28.6139 (8 decimal places = ~1.1mm precision)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    longitude <span class="dt">DECIMAL</span>(<span class="dv">11</span>, <span class="dv">8</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,         <span class="co">-- e.g., 77.2090</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    session_start <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    session_end <span class="dt">TIMESTAMP</span> <span class="kw">NULL</span>,                <span class="co">-- NULL = active session</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (teacher_id) <span class="kw">REFERENCES</span> teachers(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (schedule_id) <span class="kw">REFERENCES</span> schedules(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (assignment_id) <span class="kw">REFERENCES</span> teacher_assignments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_teacher_active (teacher_id, is_active),</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_schedule (schedule_id),</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_session (session_start, session_end)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Workflow</strong>: 1. Teacher clicks “Start Class” → Create
+entry with current lat/long 2. Used to verify student proximity (GPS
+verification) 3. Teacher clicks “End Class” → Set session_end timestamp
+4. Deleted when class session ends (optional archival)</p>
+<hr />
+<h3 id="attendance-table-core-data">9. ATTENDANCE Table (Core Data)</h3>
+<p><strong>Purpose</strong>: Store attendance records for each student
+<strong>Rows</strong>: 50,000-500,000+ over academic year</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> attendance (</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    student_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    schedule_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    assignment_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    teacher_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    department_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    attendance_date <span class="dt">DATE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    attendance_time <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- GPS Verification</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    student_latitude <span class="dt">DECIMAL</span>(<span class="dv">10</span>, <span class="dv">8</span>),</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    student_longitude <span class="dt">DECIMAL</span>(<span class="dv">11</span>, <span class="dv">8</span>),</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    teacher_latitude <span class="dt">DECIMAL</span>(<span class="dv">10</span>, <span class="dv">8</span>),</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    teacher_longitude <span class="dt">DECIMAL</span>(<span class="dv">11</span>, <span class="dv">8</span>),</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    distance_meters <span class="dt">DECIMAL</span>(<span class="dv">8</span>, <span class="dv">2</span>),            <span class="co">-- Calculated distance</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Face Verification</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    face_confidence_score <span class="dt">DECIMAL</span>(<span class="dv">5</span>, <span class="dv">2</span>),      <span class="co">-- 0-100 percentage</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- Verification Result</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    verification_status ENUM(<span class="st">&#39;success&#39;</span>, <span class="st">&#39;gps_failed&#39;</span>, <span class="st">&#39;face_failed&#39;</span>, <span class="st">&#39;both_failed&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    status ENUM(<span class="st">&#39;present&#39;</span>, <span class="st">&#39;absent&#39;</span>, <span class="st">&#39;late&#39;</span>) <span class="kw">DEFAULT</span> <span class="st">&#39;present&#39;</span>,</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    device_info <span class="dt">VARCHAR</span>(<span class="dv">255</span>),                 <span class="co">-- Device details for debugging</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    remarks TEXT,                             <span class="co">-- Admin notes</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (student_id) <span class="kw">REFERENCES</span> students(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (schedule_id) <span class="kw">REFERENCES</span> schedules(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (assignment_id) <span class="kw">REFERENCES</span> teacher_assignments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (teacher_id) <span class="kw">REFERENCES</span> teachers(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">UNIQUE</span> <span class="kw">KEY</span> unique_attendance (student_id, schedule_id, attendance_date),</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_student (student_id),</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_date (attendance_date),</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_department (department_id),</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_verification (verification_status),</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_status (status),</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_student_date (student_id, attendance_date)</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Verification Logic</strong>:</p>
+<pre><code>├─ GPS Verification (50m radius threshold)
+│  ├─ distance_meters &lt; 50 → PASS
+│  └─ distance_meters &gt;= 50 → FAIL (gps_failed)
+│
+├─ Face Verification (75% confidence threshold)
+│  ├─ face_confidence_score &gt;= 75 → PASS
+│  └─ face_confidence_score &lt; 75 → FAIL (face_failed)
+│
+└─ Final Status
+   ├─ Both PASS → verification_status = &quot;success&quot;
+   ├─ GPS FAIL → verification_status = &quot;gps_failed&quot;
+   ├─ Face FAIL → verification_status = &quot;face_failed&quot;
+   └─ Both FAIL → verification_status = &quot;both_failed&quot;</code></pre>
+<hr />
+<h3 id="fcm_tokens-table">10. FCM_TOKENS Table</h3>
+<p><strong>Purpose</strong>: Store Firebase Cloud Messaging tokens for
+push notifications <strong>Rows</strong>: 1000-5000 (multiple devices
+per user)</p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> fcm_tokens (</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    user_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    token <span class="dt">VARCHAR</span>(<span class="dv">500</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,               <span class="co">-- FCM registration token</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    device_type ENUM(<span class="st">&#39;android&#39;</span>, <span class="st">&#39;ios&#39;</span>, <span class="st">&#39;web&#39;</span>) <span class="kw">DEFAULT</span> <span class="st">&#39;android&#39;</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    device_name <span class="dt">VARCHAR</span>(<span class="dv">100</span>),                  <span class="co">-- e.g., &quot;Samsung Galaxy S21&quot;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">UNIQUE</span> <span class="kw">KEY</span> unique_token (token(<span class="dv">255</span>)),</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_user (user_id),</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_active (is_active)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Workflow</strong>: 1. Android app registers FCM token on
+login 2. Backend stores token with device info 3. Backend uses token to
+send push notifications 4. Token updated on app update or logout</p>
+<hr />
+<h3 id="notifications-table">11. NOTIFICATIONS Table</h3>
+<p><strong>Purpose</strong>: Store system notifications &amp; alerts
+<strong>Rows</strong>: 10,000-100,000 over academic year</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> notifications (</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    title <span class="dt">VARCHAR</span>(<span class="dv">255</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    message TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    notification_type ENUM(<span class="st">&#39;attendance_alert&#39;</span>, <span class="st">&#39;low_attendance&#39;</span>, <span class="st">&#39;system&#39;</span>, <span class="st">&#39;schedule_change&#39;</span>, <span class="st">&#39;face_reregister&#39;</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    target_role ENUM(<span class="st">&#39;admin&#39;</span>, <span class="st">&#39;teacher&#39;</span>, <span class="st">&#39;student&#39;</span>, <span class="st">&#39;all&#39;</span>),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    target_user_id <span class="dt">INT</span> <span class="kw">NULL</span>,                   <span class="co">-- Specific user (if applicable)</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    target_department_id <span class="dt">INT</span> <span class="kw">NULL</span>,             <span class="co">-- All students in dept (if applicable)</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">data</span> JSON,                                 <span class="co">-- Additional data (e.g., {&quot;student_id&quot;: 123})</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    is_read <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    is_sent <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    sent_at <span class="dt">TIMESTAMP</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    read_at <span class="dt">TIMESTAMP</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    created_by <span class="dt">INT</span>,                            <span class="co">-- Admin who created notification</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (target_user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (target_department_id) <span class="kw">REFERENCES</span> departments(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (created_by) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">SET</span> <span class="kw">NULL</span>,</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_target (target_role, target_user_id),</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_sent (is_sent),</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_read (is_read),</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_type (notification_type)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Notification Types</strong>: - <code>attendance_alert</code>:
+Student should mark attendance - <code>low_attendance</code>: Student
+below minimum threshold - <code>schedule_change</code>: Class
+rescheduled - <code>face_reregister</code>: Face registration expired -
+<code>system</code>: General system announcements</p>
+<hr />
+<h3 id="sessions-table">12. SESSIONS Table</h3>
+<p><strong>Purpose</strong>: Track user sessions for security
+<strong>Rows</strong>: 100-1000 (active sessions)</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> sessions (</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    user_id <span class="dt">INT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    session_id <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,  <span class="co">-- Random session token</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    ip_address <span class="dt">VARCHAR</span>(<span class="dv">45</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,          <span class="co">-- IPv4 or IPv6</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    user_agent TEXT,                          <span class="co">-- Browser info</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    expires_at <span class="dt">TIMESTAMP</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">CASCADE</span>,</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_user_session (user_id, session_id),</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_expires (expires_at)</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h3 id="system_settings-table">13. SYSTEM_SETTINGS Table</h3>
+<p><strong>Purpose</strong>: Store application configuration
+<strong>Rows</strong>: 10-20 (key-value pairs)</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> system_settings (</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    setting_key <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">UNIQUE</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    setting_value TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    data_type <span class="dt">VARCHAR</span>(<span class="dv">20</span>),                     <span class="co">-- &#39;int&#39;, &#39;string&#39;, &#39;boolean&#39;, &#39;json&#39;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    description TEXT,</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    is_active <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">TRUE</span>,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    updated_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span> <span class="kw">ON</span> <span class="kw">UPDATE</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_key (setting_key)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<p><strong>Sample Settings</strong>:</p>
+<pre><code>gps_proximity_radius        | 50            | GPS threshold in meters
+face_confidence_threshold   | 75            | Face matching score %
+late_threshold_minutes      | 15            | Minutes late threshold
+academic_year              | 2024-25       | Current academic year
+semester_current           | 2             | Current active semester
+maintenance_mode           | false         | System maintenance flag
+attendance_window_minutes  | 30            | Attendance marking window</code></pre>
+<hr />
+<h3 id="login_attempts-table">14. LOGIN_ATTEMPTS Table</h3>
+<p><strong>Purpose</strong>: Security audit trail <strong>Rows</strong>:
+1000-10000 (grows with usage)</p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> login_attempts (</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    email <span class="dt">VARCHAR</span>(<span class="dv">100</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    ip_address <span class="dt">VARCHAR</span>(<span class="dv">45</span>) <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    user_agent TEXT,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    attempt_time <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    success <span class="dt">BOOLEAN</span> <span class="kw">DEFAULT</span> <span class="kw">FALSE</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_email_time (email, attempt_time),</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_ip_time (ip_address, attempt_time)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h3 id="audit_logs-table-optional">15. AUDIT_LOGS Table (Optional)</h3>
+<p><strong>Purpose</strong>: Track all system changes for compliance
+<strong>Rows</strong>: 10000+ (every create/update/delete)</p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> audit_logs (</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">id</span> <span class="dt">INT</span> <span class="kw">PRIMARY</span> <span class="kw">KEY</span> AUTO_INCREMENT,</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    user_id <span class="dt">INT</span>,</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    action <span class="dt">VARCHAR</span>(<span class="dv">50</span>),                        <span class="co">-- &#39;CREATE&#39;, &#39;UPDATE&#39;, &#39;DELETE&#39;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    entity_type <span class="dt">VARCHAR</span>(<span class="dv">50</span>),                   <span class="co">-- &#39;STUDENT&#39;, &#39;ATTENDANCE&#39;, etc.</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    entity_id <span class="dt">INT</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    changes JSON,                             <span class="co">-- { &quot;field&quot;: &quot;from_value -&gt; to_value&quot; }</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    created_at <span class="dt">TIMESTAMP</span> <span class="kw">DEFAULT</span> <span class="fu">CURRENT_TIMESTAMP</span>,</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">FOREIGN</span> <span class="kw">KEY</span> (user_id) <span class="kw">REFERENCES</span> users(<span class="kw">id</span>) <span class="kw">ON</span> <span class="kw">DELETE</span> <span class="kw">SET</span> <span class="kw">NULL</span>,</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_entity (entity_type, entity_id),</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">INDEX</span> idx_time (created_at)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>);</span></code></pre></div>
+<hr />
+<h2 id="data-types-constraints">Data Types &amp; Constraints</h2>
+<h3 id="primary-data-types">Primary Data Types</h3>
+<pre><code>INT          - User IDs, counts, integers
+VARCHAR      - Strings with max length (emails, names)
+TEXT         - Long text (descriptions, remarks)
+LONGBLOB     - Binary data (face photos)
+DATE         - Date only (YYYY-MM-DD)
+TIMESTAMP    - Date + Time (auto-managed)
+TIME         - Time only (HH:MM:SS)
+DECIMAL      - Precise decimals (GPS lat/long, percentages)
+BOOLEAN      - True/False (is_active, face_registered)
+ENUM         - Predefined values (role, status)
+JSON         - Structured data (notification data, settings)</code></pre>
+<h3 id="constraints">Constraints</h3>
+<p><strong>Primary Keys</strong>:
+<code>id INT PRIMARY KEY AUTO_INCREMENT</code> - Unique identifier for
+each row - Auto-increment for simple assignment</p>
+<p><strong>Foreign Keys</strong>:
+<code>FOREIGN KEY (column) REFERENCES table(column)</code> - Maintain
+referential integrity - Cascade delete for related records - Set NULL on
+delete for optional relationships</p>
+<p><strong>Unique Keys</strong>:
+<code>UNIQUE KEY unique_name (columns)</code> - Prevent duplicate data
+(email, roll_number, token)</p>
+<p><strong>Indexes</strong>: - Improve query performance on frequently
+searched columns - Composite indexes for multi-column queries - Avoid
+over-indexing (impacts INSERT/UPDATE performance)</p>
+<hr />
+<h2 id="relationships-foreign-keys">Relationships &amp; Foreign
+Keys</h2>
+<h3 id="one-to-many-relationships">One-to-Many Relationships</h3>
+<ol type="1">
+<li><strong>Users → Students</strong> (1:1)
+<ul>
+<li>One user account has one student profile</li>
+<li><code>students.user_id</code> → <code>users.id</code></li>
+</ul></li>
+<li><strong>Users → Teachers</strong> (1:1)
+<ul>
+<li>One user account has one teacher profile</li>
+<li><code>teachers.user_id</code> → <code>users.id</code></li>
+</ul></li>
+<li><strong>Departments → Subjects</strong> (1:N)
+<ul>
+<li>One department offers many subjects</li>
+<li><code>subjects.department_id</code> →
+<code>departments.id</code></li>
+</ul></li>
+<li><strong>Students → Attendance</strong> (1:N)
+<ul>
+<li>One student has many attendance records</li>
+<li><code>attendance.student_id</code> → <code>students.id</code></li>
+</ul></li>
+<li><strong>Schedules → Attendance</strong> (1:N)
+<ul>
+<li>One schedule has many attendance records</li>
+<li><code>attendance.schedule_id</code> → <code>schedules.id</code></li>
+</ul></li>
+</ol>
+<h3 id="many-to-many-relationships">Many-to-Many Relationships</h3>
+<ol type="1">
+<li><strong>Teachers ↔︎ Subjects</strong> (N:N via TEACHER_ASSIGNMENTS)
+<ul>
+<li>One teacher teaches many subjects</li>
+<li>One subject taught by many teachers</li>
+<li><code>teacher_assignments.teacher_id</code> →
+<code>teachers.id</code></li>
+<li><code>teacher_assignments.subject_id</code> →
+<code>subjects.id</code></li>
+</ul></li>
+<li><strong>Subjects ↔︎ Schedules</strong> (N:N via TEACHER_ASSIGNMENTS)
+<ul>
+<li>Subject with different time slots</li>
+<li><code>schedules.assignment_id</code> →
+<code>teacher_assignments.id</code></li>
+</ul></li>
+</ol>
+<hr />
+<h2 id="indexes-performance">Indexes &amp; Performance</h2>
+<h3 id="index-strategy">Index Strategy</h3>
+<p><strong>Indexed Columns</strong>:</p>
+<pre><code>users:
+  - email (UNIQUE, used in login)
+  - role (used for permission checks)
+  - is_active (used for active user filtering)
+
+students:
+  - roll_number (UNIQUE, student identifier)
+  - (department_id, semester) - composite for batch queries
+  - face_registered (for face registration queries)
+
+teachers:
+  - employee_id (UNIQUE, teacher identifier)
+  - primary_department_id
+
+teacher_assignments:
+  - (teacher_id, subject_id, department_id, semester, academic_year)
+  - academic_year (multi-year support)
+  - is_active
+
+attendance:
+  - (student_id, schedule_id, attendance_date) - UNIQUE
+  - (student_id, attendance_date) - composite for history
+  - verification_status (filtering)
+  - status (filtering)</code></pre>
+<h3 id="query-examples-with-indexes">Query Examples with Indexes</h3>
+<div class="sourceCode" id="cb21"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Index: (student_id, attendance_date)</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> attendance </span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> student_id <span class="op">=</span> <span class="dv">123</span> <span class="kw">AND</span> attendance_date <span class="op">=</span> <span class="st">&#39;2024-01-15&#39;</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="kw">ORDER</span> <span class="kw">BY</span> attendance_time <span class="kw">DESC</span>;</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co">-- Index: (teacher_id, is_active)</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> <span class="op">*</span> <span class="kw">FROM</span> teacher_assignments </span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> teacher_id <span class="op">=</span> <span class="dv">5</span> <span class="kw">AND</span> is_active <span class="op">=</span> <span class="kw">TRUE</span>;</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a><span class="co">-- Index: (subject_id, semester, academic_year)</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="kw">SELECT</span> ta.<span class="op">*</span> <span class="kw">FROM</span> teacher_assignments ta</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="kw">WHERE</span> ta.subject_id <span class="op">=</span> <span class="dv">10</span> <span class="kw">AND</span> ta.semester <span class="op">=</span> <span class="dv">2</span> <span class="kw">AND</span> ta.academic_year <span class="op">=</span> <span class="st">&#39;2024-25&#39;</span>;</span></code></pre></div>
+<hr />
+<h2 id="sample-data-flow">Sample Data Flow</h2>
+<h3 id="attendance-marking-workflow">Attendance Marking Workflow</h3>
+<p><strong>Sequence</strong>:</p>
+<pre><code>1. Student opens app → Dashboard screen
+   Query: SELECT * FROM schedules 
+          WHERE assignment_id IN (SELECT id FROM teacher_assignments 
+                                  WHERE subject_id IN (SELECT id FROM subjects 
+                                                       WHERE department_id = student.department_id 
+                                                       AND semester = student.semester))
+
+2. Teacher starts class
+   Insert: INSERT INTO teacher_locations 
+           (teacher_id, schedule_id, assignment_id, latitude, longitude)
+           VALUES (5, 10, 7, 28.6139, 77.2090)
+
+3. Student marks attendance
+   Insert: INSERT INTO attendance 
+           (student_id, schedule_id, assignment_id, teacher_id, department_id,
+            attendance_date, student_latitude, student_longitude, 
+            teacher_latitude, teacher_longitude, distance_meters, 
+            face_confidence_score, verification_status, status)
+           VALUES (123, 10, 7, 5, 2, &#39;2024-01-15&#39;, 28.6140, 77.2091, 
+                   28.6139, 77.2090, 12.5, 92.3, &#39;success&#39;, &#39;present&#39;)
+
+4. Teacher ends class
+   Update: UPDATE teacher_locations SET session_end = NOW() WHERE id = 456
+   Action: Auto-mark absent for students not marked
+           UPDATE attendance SET status = &#39;absent&#39; 
+           WHERE schedule_id = 10 AND attendance_date = &#39;2024-01-15&#39; 
+           AND student_id NOT IN (SELECT student_id FROM attendance 
+                                  WHERE schedule_id = 10 
+                                  AND attendance_date = &#39;2024-01-15&#39;)
+
+5. Query attendance history
+   Select: SELECT a.*, s.subject_name, t.full_name as teacher_name
+           FROM attendance a
+           JOIN schedules sch ON a.schedule_id = sch.id
+           JOIN teacher_assignments ta ON a.assignment_id = ta.id
+           JOIN subjects s ON ta.subject_id = s.id
+           JOIN teachers t ON a.teacher_id = t.id
+           WHERE a.student_id = 123 AND a.attendance_date BETWEEN &#39;2024-01-01&#39; AND &#39;2024-01-31&#39;
+           ORDER BY a.attendance_date DESC</code></pre>
+<hr />
+<h2 id="summary">Summary</h2>
+<p><strong>Database Design Principles</strong>: 1.
+<strong>Normalization</strong>: Minimized data redundancy 2.
+<strong>Referential Integrity</strong>: Foreign keys maintain
+consistency 3. <strong>Performance</strong>: Strategic indexing for
+common queries 4. <strong>Scalability</strong>: Designed to handle 1000s
+of students 5. <strong>Audit Trail</strong>: Login attempts and audit
+logs for security 6. <strong>Flexibility</strong>: ENUM types for status
+values, JSON for extensibility</p>
+<p><strong>Key Optimization Strategies</strong>: - Composite indexes on
+frequently combined columns - UNIQUE constraints on identifiers -
+Pagination for large result sets - Denormalization where necessary
+(distance_meters in attendance) - Archive tables for old records
+(optional)</p>
