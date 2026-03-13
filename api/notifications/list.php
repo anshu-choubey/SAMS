@@ -69,17 +69,14 @@ try {
             'title' => $n['title'],
             'message' => $n['message'],
             'type' => $n['notification_type'],
-            'data' => $n['data'] ? json_decode($n['data'], true) : null,
             'is_read' => (bool)$n['is_read'],
             'created_at' => $n['created_at'],
             'read_at' => $n['read_at']
         ];
     }, $notifications);
 
-    Response::success([
-        'notifications' => $formattedNotifications,
-        'unread_count' => (int)$unreadCount
-    ]);
+    // Return as direct list (wrapped in ApiResponse by framework)
+    Response::success($formattedNotifications);
 
 } catch (Exception $e) {
     http_response_code(500);
