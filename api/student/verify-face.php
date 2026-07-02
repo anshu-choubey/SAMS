@@ -15,6 +15,30 @@ require_once __DIR__ . '/../../includes/models/Student.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
 require_once __DIR__ . '/../../includes/helpers/Validator.php';
 
+function getSystemSettingValue(PDO $db, string $settingKey, $defaultValue = null) {
+    try {
+        $valueColumnQuery = "SELECT COLUMN_NAME
+                             FROM INFORMATION_SCHEMA.COLUMNS
+                             WHERE TABLE_SCHEMA = DATABASE()
+                               AND TABLE_NAME = 'system_settings'
+                               AND COLUMN_NAME IN ('setting_value', 'value')
+                             ORDER BY FIELD(COLUMN_NAME, 'setting_value', 'value')
+                             LIMIT 1";
+        $stmt = $db->query($valueColumnQuery);
+        $valueColumn = $stmt ? ($stmt->fetch(PDO::FETCH_ASSOC)['COLUMN_NAME'] ?? 'setting_value') : 'setting_value';
+
+        $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':setting_key', $settingKey);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result['setting_value'] ?? $defaultValue;
+    } catch (Exception $e) {
+        return $defaultValue;
+    }
+}
+
 // Handle CORS
 CORS::handle();
 
@@ -54,11 +78,7 @@ try {
         $decryptedEmbedding = $studentModel->getFaceData($studentData['id']);
         
         // Get threshold from database settings
-        $thresholdQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'face_confidence_threshold'";
-        $thresholdStmt = $db->prepare($thresholdQuery);
-        $thresholdStmt->execute();
-        $thresholdResult = $thresholdStmt->fetch(PDO::FETCH_ASSOC);
-        $threshold = $thresholdResult ? (int)$thresholdResult['setting_value'] : (FACE_CONFIDENCE_THRESHOLD ?? 95);
+        $threshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 95) ?: (FACE_CONFIDENCE_THRESHOLD ?? 95));
         
         Response::success([
             'face_embedding' => $decryptedEmbedding,

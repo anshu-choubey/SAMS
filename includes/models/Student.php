@@ -23,6 +23,23 @@ class Student {
         $this->conn = $db;
     }
 
+    private function getIdentifierColumn() {
+        $query = "SELECT COLUMN_NAME
+                  FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'students'
+                    AND COLUMN_NAME IN ('user_id', 'id')
+                  ORDER BY FIELD(COLUMN_NAME, 'user_id', 'id')
+                  LIMIT 1";
+        $stmt = $this->conn->query($query);
+        if ($stmt) {
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['COLUMN_NAME'] ?? 'id';
+        }
+
+        return 'id';
+    }
+
     /**
      * Create student profile
      */
@@ -112,10 +129,11 @@ class Student {
      * Get student by user ID
      */
     public function getByUserId($userId) {
+        $identifierColumn = $this->getIdentifierColumn();
         $query = "SELECT s.*, d.name as department_name, d.code as department_code
                   FROM " . $this->table . " s
                   JOIN departments d ON s.department_id = d.id
-                  WHERE s.user_id = :user_id LIMIT 1";
+                  WHERE s.{$identifierColumn} = :user_id LIMIT 1";
 
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':user_id', $userId);

@@ -17,6 +17,30 @@ require_once __DIR__ . '/../../includes/models/Attendance.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
 require_once __DIR__ . '/../../includes/helpers/Validator.php';
 
+function getSystemSettingValue(PDO $db, string $settingKey, $defaultValue = null) {
+    try {
+        $valueColumnQuery = "SELECT COLUMN_NAME
+                             FROM INFORMATION_SCHEMA.COLUMNS
+                             WHERE TABLE_SCHEMA = DATABASE()
+                               AND TABLE_NAME = 'system_settings'
+                               AND COLUMN_NAME IN ('setting_value', 'value')
+                             ORDER BY FIELD(COLUMN_NAME, 'setting_value', 'value')
+                             LIMIT 1";
+        $stmt = $db->query($valueColumnQuery);
+        $valueColumn = $stmt ? ($stmt->fetch(PDO::FETCH_ASSOC)['COLUMN_NAME'] ?? 'setting_value') : 'setting_value';
+
+        $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':setting_key', $settingKey);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result['setting_value'] ?? $defaultValue;
+    } catch (Exception $e) {
+        return $defaultValue;
+    }
+}
+
 // Handle CORS
 CORS::handle();
 
@@ -36,11 +60,7 @@ try {
     $db = $database->getConnection();
 
     // Get face confidence threshold from settings
-    $settingsQuery = "SELECT `value` FROM system_settings WHERE `key` = 'face_confidence_threshold' LIMIT 1";
-    $settingsStmt = $db->prepare($settingsQuery);
-    $settingsStmt->execute();
-    $settingsResult = $settingsStmt->fetch(PDO::FETCH_ASSOC);
-    $faceConfidenceThreshold = $settingsResult ? intval($settingsResult['value']) : 85;
+    $faceConfidenceThreshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', 85) ?: 85);
 
     // Get POST data
     $data = json_decode(file_get_contents('php://input'), true);
@@ -78,7 +98,11 @@ try {
     }
 
     // Check if face registered
-    if (!$studentData['face_registered']) {
+    $faceRegistered = isset($studentData['face_registered'])
+        ? (bool)$studentData['face_registered']
+        : !empty($studentData['face_data']);
+
+    if (!$faceRegistered) {
         Response::error('Please register your face first before marking attendance', 400);
     }
 
