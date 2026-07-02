@@ -120,51 +120,33 @@ try {
     $stmt->execute();
     $tokens = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Send FCM notifications
+    // Send FCM notifications through Firebase Cloud Messaging API v1
     $sentCount = 0;
     $failedCount = 0;
 
-    if (!empty($tokens) && defined('FCM_SERVER_KEY') && FCM_SERVER_KEY) {
+    if (!empty($tokens)) {
+        $firebaseConfig = new FirebaseConfig();
         $fcmTokens = array_column($tokens, 'token');
-        
-        foreach (array_chunk($fcmTokens, 500) as $tokenChunk) {
-            $fcmPayload = [
-                'registration_ids' => $tokenChunk,
-                'notification' => [
-                    'title' => $data['title'],
-                    'body' => $data['message']
-                ],
-                'data' => [
-                    'notification_id' => $notificationId,
-                    'type' => $data['type'],
-                    'custom_data' => $data['data'] ?? null
-                ]
-            ];
+        $result = $firebaseConfig->sendNotification(
+            $fcmTokens,
+            $data['title'],
+            $data['message'],
+            [
+                'notification_id' => (string)$notificationId,
+                'type' => (string)$data['type'],
+                'custom_data' => isset($data['data']) ? json_encode($data['data']) : '',
+            ]
+        );
 
-            $ch = curl_init('https://fcm.googleapis.com/fcm/send');
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: key=' . FCM_SERVER_KEY,
-                'Content-Type: application/json'
-            ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fcmPayload));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            
-            $response = curl_exec($ch);
-            $result = json_decode($response, true);
-            curl_close($ch);
+        $sentCount = (int)($result['sent'] ?? 0);
+        $failedCount = (int)($result['failed'] ?? 0);
 
-            if ($result) {
-                $sentCount += $result['success'] ?? 0;
-                $failedCount += $result['failure'] ?? 0;
-            }
+        if (!empty($result['success'])) {
+            $updateQuery = "UPDATE notifications SET is_sent = TRUE, sent_at = NOW() WHERE id = :id";
+            $stmt = $db->prepare($updateQuery);
+            $stmt->bindParam(':id', $notificationId);
+            $stmt->execute();
         }
-
-        // Update notification as sent
-        $updateQuery = "UPDATE notifications SET is_sent = TRUE, sent_at = NOW() WHERE id = :id";
-        $stmt = $db->prepare($updateQuery);
-        $stmt->bindParam(':id', $notificationId);
-        $stmt->execute();
     }
 
     Response::success([

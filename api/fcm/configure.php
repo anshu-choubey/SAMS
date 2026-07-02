@@ -1,14 +1,14 @@
 <?php
 /**
  * FCM Configuration API (Admin only)
- * Set/Update FCM Server Key
+ * Set/Update Firebase service account credentials for FCM API v1
  */
 
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../config/fcm-helper.php';
+require_once __DIR__ . '/../../config/firebase.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -31,72 +31,48 @@ try {
     $data = json_decode(file_get_contents('php://input'), true);
 
     $validator = new Validator();
-    $validator->required('fcm_server_key', $data['fcm_server_key'] ?? '', 'FCM Server Key');
+    $validator->required('service_account_json', $data['service_account_json'] ?? '', 'Service Account JSON');
+    $validator->required('project_id', $data['project_id'] ?? '', 'Project ID');
 
     if ($validator->hasErrors()) {
         Response::validationError($validator->getErrors());
     }
 
-    $serverKey = trim($data['fcm_server_key']);
+    $serviceAccountJson = trim($data['service_account_json']);
+    $projectId = trim($data['project_id']);
 
-    // Validate server key format (should start with 'AAAA')
-    if (!preg_match('/^AAAA[A-Za-z0-9_-]+$/', $serverKey)) {
-        Response::error('Invalid FCM Server Key format. It should start with "AAAA"', 400);
+    $serviceAccount = json_decode($serviceAccountJson, true);
+    if (!is_array($serviceAccount) || empty($serviceAccount['client_email']) || empty($serviceAccount['private_key'])) {
+        Response::error('Invalid Firebase service account JSON', 400);
     }
 
     // Update setting
     $valueColumn = getSystemSettingsValueColumn($db) ?: 'setting_value';
-    $upsertQuery = "INSERT INTO system_settings (setting_key, {$valueColumn}, setting_type)
-                    VALUES ('fcm_server_key', :value, 'string')
-                    ON DUPLICATE KEY UPDATE {$valueColumn} = VALUES({$valueColumn}), updated_at = NOW()";
-    $stmt = $db->prepare($upsertQuery);
-    $stmt->bindParam(':value', $serverKey);
-
-    if (!$stmt->execute()) {
-        Response::error('Failed to update FCM Server Key', 500);
-    }
-
-    // Test the connection to FCM
-    $testPayload = [
-        'registration_ids' => ['invalid_test_token'],
-        'notification' => [
-            'title' => 'FCM Configuration Test',
-            'body' => 'Testing FCM connection'
-        ]
+    $settings = [
+        'firebase_service_account_json' => $serviceAccountJson,
+        'firebase_project_id' => $projectId,
     ];
 
-    $ch = curl_init('https://fcm.googleapis.com/fcm/send');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: key=' . $serverKey,
-        'Content-Type: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($testPayload));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    foreach ($settings as $settingKey => $settingValue) {
+        $upsertQuery = "INSERT INTO system_settings (setting_key, {$valueColumn}, setting_type)
+                        VALUES (:setting_key, :value, 'string')
+                        ON DUPLICATE KEY UPDATE {$valueColumn} = VALUES({$valueColumn}), updated_at = NOW()";
+        $stmt = $db->prepare($upsertQuery);
+        $stmt->bindValue(':setting_key', $settingKey);
+        $stmt->bindValue(':value', $settingValue);
 
-    $testResult = json_decode($response, true);
-    
-    // 200 or 400/401 errors indicate connectivity - 401 means invalid key
-    $connectionValid = in_array($httpCode, [200, 400, 401]);
-
-    $message = 'FCM Server Key configured successfully';
-    if (!$connectionValid) {
-        $message = 'Key configured but connection test failed. Please verify the key is correct.';
-    } elseif ($httpCode === 401) {
-        $message = 'Key configured but appears to be invalid. Please verify with Firebase Console.';
+        if (!$stmt->execute()) {
+            Response::error('Failed to update Firebase configuration', 500);
+        }
     }
 
+    $message = 'Firebase service account configured successfully';
+
     Response::success([
-        'fcm_server_key_set' => true,
-        'connection_test_status' => $httpCode === 200 ? 'SUCCESS' : ($httpCode === 401 ? 'KEY_INVALID' : 'FAILED'),
-        'http_code' => $httpCode,
+        'service_account_configured' => true,
+        'project_id' => $projectId,
         'message' => $message
-    ], 'FCM Server Key updated');
+    ], 'Firebase configuration updated');
 
 } catch (Exception $e) {
     http_response_code(500);

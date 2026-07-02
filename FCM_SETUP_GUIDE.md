@@ -1,43 +1,34 @@
 # FCM Notification Setup Guide
 
 ## Overview
-Firebase Cloud Messaging (FCM) is used to send push notifications to students and teachers in the SAMS app. Currently, **FCM is not working because the Backend FCM Server Key is not configured**.
+Firebase Cloud Messaging (FCM) is used to send push notifications to students and teachers in the SAMS app. This project uses **Firebase Cloud Messaging API v1**, which requires a **service account** and OAuth access, not the legacy server key flow.
 
 ## Problem
-The FCM server key in the system_settings database is empty. Without this key, the backend cannot communicate with Firebase to send notifications.
+The old server-key setup is not the right credential model for FCM API v1. Without a Firebase service account, the backend cannot mint access tokens and call the v1 send endpoint.
 
 ## Solution Steps
 
-### Step 1: Get Your FCM Server Key from Firebase Console
+### Step 1: Get Your Firebase Service Account
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
 2. Select the project: **careful-form-373115**
 3. Navigate to **Project Settings** (gear icon) → **Service Accounts**
-4. Go to **Database Secrets** tab (or look for Cloud Messaging tab)
-5. Copy your **Server Key** (it starts with "AAAA...")
+4. Generate a **new private key** for the service account
+5. Download the JSON file and store it securely
 
-### Step 2: Configure FCM Server Key in Backend
+### Step 2: Configure FCM API v1 Credentials in Backend
 
-Use the configuration API to set your FCM server key:
+For FCM API v1, configure the backend with the service account JSON or environment variables.
+
+Example environment variables:
 
 ```bash
-curl -X PUT https://www.arkdev.app/api/fcm/configure.php \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  -d '{
-    "fcm_server_key": "YOUR_FCM_SERVER_KEY_HERE"
-  }'
+FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+FIREBASE_PROJECT_ID='careful-form-373115'
 ```
 
-Or via API endpoint in your admin panel:
-- **Endpoint**: `PUT /api/fcm/configure.php`
-- **Role Required**: Admin
-- **Body**:
-```json
-{
-  "fcm_server_key": "AAAA..."
-}
-```
+For FCM API v1, use the service account JSON or environment variables only.
+There is no legacy server-key configuration step in the v1 flow.
 
 ### Step 3: Verify FCM Configuration
 
@@ -54,7 +45,7 @@ Expected successful response:
   "success": true,
   "data": {
     "fcm_configured": true,
-    "fcm_server_key_set": true,
+    "service_account_configured": true,
     "registered_devices": 5,
     "registered_users": 3,
     "status": "READY"
@@ -140,8 +131,8 @@ Returns: FCM configuration status and token statistics
 PUT /api/fcm/configure.php
 ```
 Auth: Admin  
-Body: `{ "fcm_server_key": "..." }`  
-Returns: Configuration result and connection test status
+Body: `N/A for FCM API v1`  
+Returns: This endpoint is legacy-only and should not be used for v1.
 
 ### Register FCM Token
 ```
@@ -170,8 +161,8 @@ Body:
 
 ## Important Notes
 
-⚠️ **Never share your FCM Server Key** - it's sensitive credential  
-⚠️ **Keep it safe** in your backend configuration  
+⚠️ **Never share your Firebase service account JSON** - it is highly sensitive  
+⚠️ **Keep it safe** in a backend secret store or environment variables  
 ⚠️ **Rotate it periodically** for security  
 
 ## Need Help?

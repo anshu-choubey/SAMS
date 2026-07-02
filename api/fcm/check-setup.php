@@ -21,8 +21,8 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
-    $hasServerKey = !empty(FCM_SERVER_KEY);
-    $serverKeyPrefix = $hasServerKey ? substr(FCM_SERVER_KEY, 0, 20) . '...' : 'NOT SET';
+    $firebaseConfig = new FirebaseConfig();
+    $hasServiceAccount = $firebaseConfig->isConfigured();
 
     // Check registered FCM tokens
     $tokenQuery = "SELECT COUNT(*) as total_tokens, COUNT(DISTINCT user_id) as unique_users FROM fcm_tokens WHERE is_active = TRUE";
@@ -31,13 +31,13 @@ try {
     $tokenStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     Response::success([
-        'fcm_configured' => $hasServerKey,
-        'fcm_server_key_set' => $hasServerKey,
-        'fcm_server_key_preview' => $serverKeyPrefix,
+        'fcm_configured' => $hasServiceAccount,
+        'service_account_configured' => $hasServiceAccount,
+        'project_id' => $firebaseConfig->getProjectId(),
         'registered_devices' => (int)$tokenStats['total_tokens'],
         'registered_users' => (int)$tokenStats['unique_users'],
-        'status' => $hasServerKey ? 'READY' : 'NOT_CONFIGURED',
-        'setup_instructions' => $hasServerKey ? 'FCM is properly configured' : 'Please set FCM Server Key via PUT /api/fcm/configure.php'
+        'status' => $hasServiceAccount ? 'READY' : 'NOT_CONFIGURED',
+        'setup_instructions' => $hasServiceAccount ? 'Firebase service account is configured' : 'Set FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID'
     ]);
 
 } catch (Exception $e) {

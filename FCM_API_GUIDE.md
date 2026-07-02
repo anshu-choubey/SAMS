@@ -228,25 +228,26 @@ CREATE TABLE notifications (
 
 ## Configuration
 
-### FCM Server Key Setup
+### FCM v1 Setup
 
-1. **Get Firebase Server Key:**
-   - Go to Firebase Console → Your Project → Settings → Cloud Messaging
-   - Copy the "Server API Key"
+1. **Get Firebase Service Account JSON:**
+  - Go to Firebase Console → Your Project → Settings → Service Accounts
+  - Generate a new private key
+  - Download the JSON file
 
-2. **Add to System Settings:**
-   - Navigate to Admin Dashboard → Settings → Firebase Settings
-   - Paste the Firebase Server Key
-   - Click "Save Firebase Settings"
+2. **Store credentials securely:**
+  - Add the service-account JSON to your backend secret store or environment variables
+  - Do not commit the JSON file to the repository
 
 3. **Verify Configuration:**
    - Run: `php test-fcm.php`
-   - Should show "✓ FCM Server Key configured"
+  - Should show that Firebase credentials are configured
 
 ### Environment Variables
 ```env
 # .env file
-FCM_SERVER_KEY=AAAAxxx___your_key_here___xxxAAAA
+FIREBASE_SERVICE_ACCOUNT_JSON={...}
+FIREBASE_PROJECT_ID=careful-form-373115
 APP_ENV=production
 BASE_URL=http://localhost/sams-backend/
 ```
@@ -284,10 +285,9 @@ This script:
 
 ### Issue: "FCM Server Key not configured"
 **Solution:**
-1. Get Server Key from Firebase Console
-2. Go to Admin Settings → Firebase Settings
-3. Paste and save the key
-4. Run `php test-fcm.php` to verify
+1. For FCM API v1, use a service account JSON instead of a legacy server key
+2. Store the service account JSON in your backend secrets/environment variables
+3. Run `php test-fcm.php` to verify
 
 ### Issue: Tokens not received by devices
 **Check:**
@@ -298,9 +298,9 @@ This script:
 
 ### Issue: "Undefined constant FCM_SERVER_KEY"
 **Solution:**
-- Ensure `/config/firebase.php` is properly included
-- Check `/config/database.php` is accessible
-- Verify system_settings table has an entry for 'fcm_server_key'
+- Ensure the legacy helper is not being used for the v1 flow
+- Check that the service-account credentials are available to the backend
+- Verify the backend is loading `FIREBASE_SERVICE_ACCOUNT_JSON`
 
 ---
 

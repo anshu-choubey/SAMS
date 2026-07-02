@@ -36,17 +36,17 @@ try {
 
     // 1. Check FCM Configuration
     try {
-        $hasFcmKey = !empty(FCM_SERVER_KEY);
+        $firebaseConfig = new FirebaseConfig();
+        $hasFcmKey = $firebaseConfig->isConfigured();
         $diagnostics['fcm_config'] = [
             'configured' => $hasFcmKey,
-            'key_length' => $hasFcmKey ? strlen(FCM_SERVER_KEY) : 0,
-            'key_starts_with' => $hasFcmKey ? substr(FCM_SERVER_KEY, 0, 5) : 'NOT_SET',
+            'project_id' => $firebaseConfig->getProjectId(),
             'database_row_exists' => $hasFcmKey
         ];
 
         if (!$hasFcmKey) {
-            $diagnostics['issues'][] = '⚠️ FCM Server Key is NOT SET - Notifications cannot be sent';
-            $diagnostics['recommendations'][] = 'Call PUT /api/fcm/configure.php with your Firebase Server Key';
+            $diagnostics['issues'][] = '⚠️ Firebase service account is NOT SET - Notifications cannot be sent';
+            $diagnostics['recommendations'][] = 'Set FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID';
         }
     } catch (Exception $e) {
         $diagnostics['fcm_config']['error'] = $e->getMessage();

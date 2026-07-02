@@ -98,13 +98,14 @@ heroku run 'curl -s http://localhost:8000/api/health-check.php' --app sams-backe
 heroku run 'php api/test-db.php' --app sams-backend-73451
 ```
 
-### 3. Configure Firebase Server Key (For Push Notifications)
+### 3. Configure Firebase Credentials (For Push Notifications)
 
 ```bash
-# Get your Firebase Server Key from:
-# Firebase Console → Your Project → Settings → Cloud Messaging
+# FCM API v1 uses a service account JSON, not a legacy server key
+heroku config:set FIREBASE_SERVICE_ACCOUNT_JSON='your-service-account-json' --app sams-backend-73451
 
-heroku config:set FIREBASE_SERVER_KEY='your-actual-server-key-here' --app sams-backend-73451
+# Legacy mode only:
+# heroku config:set FCM_SERVER_KEY='your-actual-server-key-here' --app sams-backend-73451
 ```
 
 ### 4. View Application Logs

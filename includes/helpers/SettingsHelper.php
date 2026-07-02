@@ -157,7 +157,8 @@ class SettingsHelper {
      */
     public static function getFirebaseSettings() {
         return [
-            'fcm_server_key' => self::get('fcm_server_key', ''),
+            'firebase_service_account_json' => self::get('firebase_service_account_json', ''),
+            'firebase_project_id' => self::get('firebase_project_id', ''),
             'firebase_api_key' => self::get('firebase_api_key', '')
         ];
     }

@@ -45,10 +45,10 @@ try {
         $tokenColumn = 'token';
     }
 
-    $serverKey = FCM_SERVER_KEY;
+    $firebaseConfig = new FirebaseConfig();
 
-    if (empty($serverKey)) {
-        Response::error('FCM Server Key not configured. Please set it via PUT /api/fcm/configure.php', 400);
+    if (!$firebaseConfig->isConfigured()) {
+        Response::error('Firebase service account not configured. Please set FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID', 400);
     }
 
     // Get a sample FCM token to test with
@@ -71,42 +71,18 @@ try {
     $stmt->execute();
     $notificationId = $db->lastInsertId();
 
-    // Prepare FCM payload
-    $fcmPayload = [
-        'registration_ids' => [$testToken],
-        'notification' => [
-            'title' => 'FCM Test Notification',
-            'body' => 'If you see this, FCM is working correctly!'
-        ],
-        'data' => [
+    $result = $firebaseConfig->sendNotification(
+        [$testToken],
+        'FCM Test Notification',
+        'If you see this, FCM is working correctly!',
+        [
             'notification_id' => (string)$notificationId,
             'type' => 'system',
             'test' => 'true'
-        ],
-        'priority' => 'high'
-    ];
+        ]
+    );
 
-    // Send to FCM
-    $ch = curl_init('https://fcm.googleapis.com/fcm/send');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: key=' . $serverKey,
-        'Content-Type: application/json'
-    ]);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fcmPayload));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    $fcmResponse = json_decode($response, true);
-
-    // Mark notification as sent if successful
-    if ($httpCode === 200 && ($fcmResponse['success'] ?? 0) > 0) {
+    if (!empty($result['success'])) {
         $updateQuery = "UPDATE notifications SET is_sent = TRUE, sent_at = NOW() WHERE id = :id";
         $stmt = $db->prepare($updateQuery);
         $stmt->bindParam(':id', $notificationId);
@@ -115,17 +91,14 @@ try {
         Response::success([
             'notification_id' => $notificationId,
             'test_token' => substr($testToken, 0, 20) . '...',
-            'fcm_response' => $fcmResponse,
-            'http_code' => $httpCode,
+            'fcm_response' => $result,
             'status' => 'SUCCESS',
             'message' => 'Test notification sent successfully! Check your device.'
         ]);
     } else {
-        $errorMsg = $curlError ?: ($fcmResponse['error'] ?? 'Unknown FCM error');
-        
         Response::error(
-            'FCM Send Failed - HTTP ' . $httpCode . ': ' . $errorMsg,
-            $httpCode
+            'FCM Send Failed: ' . ($result['message'] ?? 'Unknown FCM error'),
+            500
         );
     }
 

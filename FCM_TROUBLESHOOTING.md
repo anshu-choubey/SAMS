@@ -20,24 +20,30 @@ This will show you:
 **Error**: `FCM Server Key is NOT SET`
 
 ### Solution:
-1. Get your FCM Server Key from Firebase Console:
+1. For Firebase Cloud Messaging API v1, use a service account instead of a legacy server key:
    - Go to https://console.firebase.google.com
    - Select project: `careful-form-373115`
    - Settings → Project Settings → Service Accounts tab
-   - Look for Cloud Messaging tab or Database Secrets
-   - Copy the "Server Key" (starts with "AAAA...")
+   - Generate a new private key and download the JSON
 
-2. Set it in the backend:
+2. Set it in the backend secret store or environment variables:
+```bash
+heroku config:set FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}' --app sams-backend-73451
+```
+
+3. If the backend still has a legacy server-key path, it must be migrated before v1 can work.
+
+Legacy example only:
 ```bash
 curl -X PUT https://www.arkdev.app/api/fcm/configure.php \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{
-    "fcm_server_key": "AAAA..."
+    "fcm_server_key": "LEGACY_SERVER_KEY_ONLY"
   }'
 ```
 
-3. Verify it was set:
+4. Verify it was set:
 ```bash
 curl -X GET https://www.arkdev.app/api/fcm/diagnose.php \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
@@ -216,7 +222,7 @@ curl -X POST https://www.arkdev.app/api/notifications/send.php \
 
 | Issue | Quick Fix |
 |-------|-----------|
-| "Invalid FCM Server Key" | Get fresh key from Firebase Console, update via `/api/fcm/configure.php` |
+| "Invalid FCM Server Key" | For legacy mode only; for v1 use a service account JSON |
 | "No tokens registered" | Have user log in app, check logs for token registration errors |
 | "Notifications not appearing" | Check notification permissions in Android settings |
 | "HTTP 401 from FCM" | FCM key is invalid/expired, get new one |
