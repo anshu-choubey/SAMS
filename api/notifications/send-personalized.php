@@ -78,11 +78,13 @@ try {
             $title = $title ?: "Attendance Alert: {$targetUser['full_name']}";
             
             // Get current attendance stats
-            $statsQuery = "SELECT 
-                            COUNT(*) as total_sessions,
-                            SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
-                           FROM attendance a
-                           WHERE a.student_id = :student_id AND a.month = MONTH(NOW())";
+                        $statsQuery = "SELECT 
+                                                        COUNT(*) as total_sessions,
+                                                        COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END), 0) as present_count
+                                                     FROM attendance a
+                                                     WHERE a.student_id = :student_id
+                                                         AND a.attendance_date >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                                                         AND a.attendance_date < DATE_ADD(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 1 MONTH)";
             $stmt = $db->prepare($statsQuery);
             $stmt->bindParam(':student_id', $targetUserId);
             $stmt->execute();
