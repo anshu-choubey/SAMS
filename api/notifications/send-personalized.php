@@ -72,6 +72,14 @@ try {
         'target_roll' => $targetUser['roll_number'],
         'notification_class' => $notifClass
     ]);
+
+    $preferencesTableExists = false;
+    try {
+        $checkPreferencesTable = $db->query("SHOW TABLES LIKE 'notification_preferences'");
+        $preferencesTableExists = $checkPreferencesTable && $checkPreferencesTable->rowCount() > 0;
+    } catch (Exception $e) {
+        $preferencesTableExists = false;
+    }
     
     switch ($notifClass) {
         case 'low_attendance':
@@ -159,17 +167,19 @@ try {
     }
     
     // Check notification preferences
-    $prefQuery = "SELECT * FROM notification_preferences WHERE user_id = :user_id";
-    $stmt = $db->prepare($prefQuery);
-    $stmt->bindParam(':user_id', $targetUserId);
-    $stmt->execute();
-    $preferences = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If preferences exist and this type is disabled, skip sending
-    if ($preferences) {
-        $prefsJson = json_decode($preferences['preferences'], true);
-        if (isset($prefsJson[$notifClass]) && !$prefsJson[$notifClass]) {
-            Response::error('User has disabled notifications of this type', 410);
+    if ($preferencesTableExists) {
+        $prefQuery = "SELECT * FROM notification_preferences WHERE user_id = :user_id";
+        $stmt = $db->prepare($prefQuery);
+        $stmt->bindParam(':user_id', $targetUserId);
+        $stmt->execute();
+        $preferences = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // If preferences exist and this type is disabled, skip sending
+        if ($preferences) {
+            $prefsJson = json_decode($preferences['preferences'], true);
+            if (isset($prefsJson[$notifClass]) && !$prefsJson[$notifClass]) {
+                Response::error('User has disabled notifications of this type', 410);
+            }
         }
     }
     
