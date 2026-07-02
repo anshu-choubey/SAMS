@@ -6,6 +6,10 @@
 
 // Load settings from database
 function getFCMServerKey() {
+    $envKey = getenv('FCM_SERVER_KEY');
+    if (!empty($envKey)) {
+        return trim($envKey);
+    }
     try {
         require_once __DIR__ . '/database.php';
         $database = new Database();

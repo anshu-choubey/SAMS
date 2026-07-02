@@ -5,6 +5,10 @@
 
 // Define FCM Server Key Constant
 function getFCMServerKey() {
+    $envKey = getenv('FCM_SERVER_KEY');
+    if (!empty($envKey)) {
+        return trim($envKey);
+    }
     try {
         if (!class_exists('Database')) {
             require_once __DIR__ . '/database.php';
@@ -74,7 +78,7 @@ class FirebaseConfig {
     }
 
     private function getServerKey() {
-        return FCM_SERVER_KEY ?: '';
+        return getFCMServerKey();
     }
 
     public function sendNotification($tokens, $title, $message, $data = []) {
