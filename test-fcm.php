@@ -33,22 +33,17 @@ foreach ($tables as $table) {
 }
 echo "\n";
 
-// 3. Check FCM Server Key
+// 3. Check Firebase service account configuration
 echo "3. FCM Configuration:\n";
-$fcmKey = defined('FCM_SERVER_KEY') ? FCM_SERVER_KEY : '';
-if (!$fcmKey) {
-    // Try to get from database directly
-    $result = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1");
-    if ($result && $result->rowCount() > 0) {
-        $fcmKey = $result->fetch(PDO::FETCH_ASSOC)['setting_value'];
-    }
-}
-echo "   - FCM Server Key: " . ($fcmKey ? "✓ Configured" : "✗ Not configured") . "\n";
-if (!$fcmKey) {
-    echo "\n⚠ WARNING: FCM Server Key is not configured.\n";
-    echo "Add your FCM Server Key in Admin Settings → Firebase Settings\n\n";
+$firebaseConfig = new FirebaseConfig();
+$configured = $firebaseConfig->isConfigured();
+echo "   - Firebase service account: " . ($configured ? "✓ Configured" : "✗ Not configured") . "\n";
+echo "   - Project ID: " . ($firebaseConfig->getProjectId() ?: "Not set") . "\n";
+if (!$configured) {
+    echo "\n⚠ WARNING: Firebase service account is not configured.\n";
+    echo "Set FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID in the backend environment\n\n";
 } else {
-    echo "   - Key length: " . strlen($fcmKey) . " characters\n";
+    echo "   - Service account JSON: loaded\n";
 }
 echo "\n";
 
@@ -151,11 +146,11 @@ echo "============================================\n";
 echo "\nFCM Setup Status:\n";
 echo "  ✓ Database tables exist\n";
 echo "  ✓ API endpoints available\n";
-echo "  " . (FCM_SERVER_KEY ? "✓" : "✗") . " FCM Server Key configured\n";
+echo "  " . ($configured ? "✓" : "✗") . " Firebase service account configured\n";
 echo "\nNext Steps:\n";
-if (!FCM_SERVER_KEY) {
-    echo "  1. Get FCM Server Key from Firebase Console\n";
-    echo "  2. Add it in Admin Settings → Firebase Settings\n";
+if (!$configured) {
+    echo "  1. Get a Firebase service account JSON from Firebase Console\n";
+    echo "  2. Set FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_PROJECT_ID\n";
 }
 echo "  3. Register FCM tokens from mobile apps\n";
 echo "  4. Send notifications via /api/notifications/send.php\n";
