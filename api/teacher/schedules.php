@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
+require_once __DIR__ . '/../../includes/models/Teacher.php';
 require_once __DIR__ . '/../../includes/models/Schedule.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
 require_once __DIR__ . '/../../includes/helpers/Validator.php';
@@ -28,6 +29,13 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
+    $teacherModel = new Teacher($db);
+    $teacherData = $userRole === 'teacher' ? $teacherModel->getByUserId($userId) : null;
+
+    if ($userRole === 'teacher' && !$teacherData) {
+        Response::error('Teacher profile not found', 404);
+    }
+
     $schedule = new Schedule($db);
     $validator = new Validator();
 
@@ -41,7 +49,7 @@ try {
                     Response::notFound('Schedule not found');
                 }
                 // Teachers can only view their own schedules
-                if ($userRole === 'teacher' && $result['teacher_id'] != $userId) {
+                if ($userRole === 'teacher' && $result['teacher_id'] != $teacherData['id']) {
                     Response::error('Access denied - can only view your own schedules', 403);
                 }
                 Response::success(['schedule' => $result]);
@@ -56,7 +64,7 @@ try {
                 
                 // If teacher role, filter to only their schedules
                 if ($userRole === 'teacher') {
-                    $filters['teacher_id'] = $userId;
+                    $filters['teacher_id'] = $teacherData['id'];
                 }
                 
                 $schedules = $schedule->getAll($filters);
