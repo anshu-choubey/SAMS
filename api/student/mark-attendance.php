@@ -19,23 +19,23 @@ require_once __DIR__ . '/../../includes/helpers/Validator.php';
 
 function getSystemSettingValue(PDO $db, string $settingKey, $defaultValue = null) {
     try {
-        $valueColumnQuery = "SELECT COLUMN_NAME
-                             FROM INFORMATION_SCHEMA.COLUMNS
-                             WHERE TABLE_SCHEMA = DATABASE()
-                               AND TABLE_NAME = 'system_settings'
-                               AND COLUMN_NAME IN ('setting_value', 'value')
-                             ORDER BY FIELD(COLUMN_NAME, 'setting_value', 'value')
-                             LIMIT 1";
-        $stmt = $db->query($valueColumnQuery);
-        $valueColumn = $stmt ? ($stmt->fetch(PDO::FETCH_ASSOC)['COLUMN_NAME'] ?? 'setting_value') : 'setting_value';
+        foreach (['setting_value', 'value'] as $valueColumn) {
+            try {
+                $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
+                $stmt = $db->prepare($query);
+                $stmt->bindParam(':setting_key', $settingKey);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':setting_key', $settingKey);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($result && array_key_exists('setting_value', $result) && $result['setting_value'] !== null) {
+                    return $result['setting_value'];
+                }
+            } catch (Exception $innerException) {
+                continue;
+            }
+        }
 
-        return $result['setting_value'] ?? $defaultValue;
+        return $defaultValue;
     } catch (Exception $e) {
         return $defaultValue;
     }

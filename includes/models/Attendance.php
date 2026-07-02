@@ -45,11 +45,7 @@ class Attendance {
         $gpsValid = $this->verifyGPSProximity();
         
         // Get face threshold from database settings
-        $thresholdQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'face_confidence_threshold'";
-        $thresholdStmt = $this->conn->prepare($thresholdQuery);
-        $thresholdStmt->execute();
-        $thresholdResult = $thresholdStmt->fetch(PDO::FETCH_ASSOC);
-        $faceThreshold = $thresholdResult ? (float)$thresholdResult['setting_value'] : (FACE_CONFIDENCE_THRESHOLD ?? 95);
+        $faceThreshold = $this->getSystemSettingValue('face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 95);
         
         // Verify face confidence
         $faceValid = $this->face_confidence_score >= $faceThreshold;
@@ -162,6 +158,29 @@ class Attendance {
         $stmt->execute();
 
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Read a system setting from whichever value column exists.
+     */
+    private function getSystemSettingValue($settingKey, $defaultValue = null) {
+        foreach (['setting_value', 'value'] as $valueColumn) {
+            try {
+                $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
+                $stmt = $this->conn->prepare($query);
+                $stmt->bindParam(':setting_key', $settingKey);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result && array_key_exists('setting_value', $result) && $result['setting_value'] !== null) {
+                    return (float)$result['setting_value'];
+                }
+            } catch (Exception $innerException) {
+                continue;
+            }
+        }
+
+        return $defaultValue;
     }
 
     /**
