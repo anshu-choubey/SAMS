@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../config/fcm-helper.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -44,11 +45,13 @@ try {
     }
 
     // Update setting
-    $updateQuery = "UPDATE system_settings SET setting_value = :value, updated_at = NOW() 
-                   WHERE setting_key = 'fcm_server_key'";
-    $stmt = $db->prepare($updateQuery);
+    $valueColumn = getSystemSettingsValueColumn($db) ?: 'setting_value';
+    $upsertQuery = "INSERT INTO system_settings (setting_key, {$valueColumn}, setting_type)
+                    VALUES ('fcm_server_key', :value, 'string')
+                    ON DUPLICATE KEY UPDATE {$valueColumn} = VALUES({$valueColumn}), updated_at = NOW()";
+    $stmt = $db->prepare($upsertQuery);
     $stmt->bindParam(':value', $serverKey);
-    
+
     if (!$stmt->execute()) {
         Response::error('Failed to update FCM Server Key', 500);
     }

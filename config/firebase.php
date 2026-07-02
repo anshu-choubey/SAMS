@@ -13,17 +13,47 @@ function getFCMServerKey() {
         $db = $database->getConnection();
 
         if ($db) {
-            $query = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
-            $stmt = $db->query($query);
-            if ($stmt && $stmt->rowCount() > 0) {
-                $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $result['setting_value'] ?? '';
+            $valueColumn = getSystemSettingsValueColumn($db);
+            if ($valueColumn) {
+                $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
+                $stmt = $db->query($query);
+                if ($stmt && $stmt->rowCount() > 0) {
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result['setting_value'] ?? '';
+                }
             }
         }
     } catch (Exception $e) {
         error_log("FCM Key Error: " . $e->getMessage());
     }
     return '';
+}
+
+function getSystemSettingsValueColumn($db) {
+    static $cachedColumn = null;
+
+    if ($cachedColumn !== null) {
+        return $cachedColumn;
+    }
+
+    try {
+        $query = "SELECT COLUMN_NAME
+                  FROM INFORMATION_SCHEMA.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'system_settings'
+                    AND COLUMN_NAME IN ('setting_value', 'value')
+                  ORDER BY FIELD(COLUMN_NAME, 'setting_value', 'value')
+                  LIMIT 1";
+        $stmt = $db->query($query);
+        if ($stmt) {
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $cachedColumn = $result['COLUMN_NAME'] ?? null;
+        }
+    } catch (Exception $e) {
+        $cachedColumn = null;
+    }
+
+    return $cachedColumn;
 }
 
 if (!defined('FCM_SERVER_KEY')) {

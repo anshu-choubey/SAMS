@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../config/firebase.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -44,12 +45,7 @@ try {
         $tokenColumn = 'token';
     }
 
-    // Get FCM Server Key
-    $keyQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
-    $stmt = $db->prepare($keyQuery);
-    $stmt->execute();
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    $serverKey = $result['setting_value'] ?? '';
+    $serverKey = FCM_SERVER_KEY;
 
     if (empty($serverKey)) {
         Response::error('FCM Server Key not configured. Please set it via PUT /api/fcm/configure.php', 400);

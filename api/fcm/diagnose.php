@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../config/firebase.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -35,17 +36,12 @@ try {
 
     // 1. Check FCM Configuration
     try {
-        $keyQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
-        $stmt = $db->prepare($keyQuery);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $hasFcmKey = !empty($result['setting_value']);
+        $hasFcmKey = !empty(FCM_SERVER_KEY);
         $diagnostics['fcm_config'] = [
             'configured' => $hasFcmKey,
-            'key_length' => $hasFcmKey ? strlen($result['setting_value']) : 0,
-            'key_starts_with' => $hasFcmKey ? substr($result['setting_value'], 0, 5) : 'NOT_SET',
-            'database_row_exists' => !empty($result)
+            'key_length' => $hasFcmKey ? strlen(FCM_SERVER_KEY) : 0,
+            'key_starts_with' => $hasFcmKey ? substr(FCM_SERVER_KEY, 0, 5) : 'NOT_SET',
+            'database_row_exists' => $hasFcmKey
         ];
 
         if (!$hasFcmKey) {

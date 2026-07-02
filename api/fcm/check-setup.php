@@ -8,6 +8,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../config/firebase.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -20,14 +21,8 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
-    // Check FCM Server Key
-    $keyQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
-    $stmt = $db->prepare($keyQuery);
-    $stmt->execute();
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $hasServerKey = !empty($result['setting_value']);
-    $serverKeyPrefix = $hasServerKey ? substr($result['setting_value'], 0, 20) . '...' : 'NOT SET';
+    $hasServerKey = !empty(FCM_SERVER_KEY);
+    $serverKeyPrefix = $hasServerKey ? substr(FCM_SERVER_KEY, 0, 20) . '...' : 'NOT SET';
 
     // Check registered FCM tokens
     $tokenQuery = "SELECT COUNT(*) as total_tokens, COUNT(DISTINCT user_id) as unique_users FROM fcm_tokens WHERE is_active = TRUE";
