@@ -28,11 +28,28 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
+    $tokenColumn = 'token';
+    try {
+        $columnQuery = "SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE()
+                          AND TABLE_NAME = 'fcm_tokens'
+                          AND COLUMN_NAME IN ('token', 'device_token')";
+        $stmt = $db->prepare($columnQuery);
+        $stmt->execute();
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('device_token', $columns, true)) {
+            $tokenColumn = 'device_token';
+        }
+    } catch (Exception $e) {
+        $tokenColumn = 'token';
+    }
+
     $data = json_decode(file_get_contents('php://input'), true);
 
     if (isset($data['token'])) {
         // Deactivate specific token
-        $query = "UPDATE fcm_tokens SET is_active = FALSE WHERE token = :token AND user_id = :user_id";
+        $query = "UPDATE fcm_tokens SET is_active = FALSE WHERE {$tokenColumn} = :token AND user_id = :user_id";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':token', $data['token']);
         $stmt->bindParam(':user_id', $user['id']);

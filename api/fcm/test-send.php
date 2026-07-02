@@ -27,6 +27,23 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
+    $tokenColumn = 'token';
+    try {
+        $columnQuery = "SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE()
+                          AND TABLE_NAME = 'fcm_tokens'
+                          AND COLUMN_NAME IN ('token', 'device_token')";
+        $stmt = $db->prepare($columnQuery);
+        $stmt->execute();
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('device_token', $columns, true)) {
+            $tokenColumn = 'device_token';
+        }
+    } catch (Exception $e) {
+        $tokenColumn = 'token';
+    }
+
     // Get FCM Server Key
     $keyQuery = "SELECT setting_value FROM system_settings WHERE setting_key = 'fcm_server_key' LIMIT 1";
     $stmt = $db->prepare($keyQuery);
@@ -39,7 +56,7 @@ try {
     }
 
     // Get a sample FCM token to test with
-    $tokenQuery = "SELECT token FROM fcm_tokens WHERE is_active = TRUE LIMIT 1";
+    $tokenQuery = "SELECT {$tokenColumn} AS token FROM fcm_tokens WHERE is_active = TRUE LIMIT 1";
     $stmt = $db->prepare($tokenQuery);
     $stmt->execute();
     $tokenResult = $stmt->fetch(PDO::FETCH_ASSOC);

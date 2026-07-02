@@ -33,6 +33,23 @@ try {
     
     $database = new Database();
     $db = $database->getConnection();
+
+    $tokenColumn = 'token';
+    try {
+        $columnQuery = "SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE()
+                          AND TABLE_NAME = 'fcm_tokens'
+                          AND COLUMN_NAME IN ('token', 'device_token')";
+        $stmt = $db->prepare($columnQuery);
+        $stmt->execute();
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('device_token', $columns, true)) {
+            $tokenColumn = 'device_token';
+        }
+    } catch (Exception $e) {
+        $tokenColumn = 'token';
+    }
     
     $data = json_decode(file_get_contents('php://input'), true);
     
@@ -201,7 +218,7 @@ try {
     $notificationId = $db->lastInsertId();
     
     // Send via FCM
-    $tokenQuery = "SELECT token FROM fcm_tokens WHERE user_id = :user_id AND is_active = TRUE LIMIT 1";
+    $tokenQuery = "SELECT {$tokenColumn} AS token FROM fcm_tokens WHERE user_id = :user_id AND is_active = TRUE LIMIT 1";
     $stmt = $db->prepare($tokenQuery);
     $stmt->bindParam(':user_id', $targetUserId);
     $stmt->execute();

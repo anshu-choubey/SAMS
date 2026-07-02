@@ -29,6 +29,23 @@ try {
     $database = new Database();
     $db = $database->getConnection();
 
+    $tokenColumn = 'token';
+    try {
+        $columnQuery = "SELECT COLUMN_NAME
+                        FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE()
+                          AND TABLE_NAME = 'fcm_tokens'
+                          AND COLUMN_NAME IN ('token', 'device_token')";
+        $stmt = $db->prepare($columnQuery);
+        $stmt->execute();
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('device_token', $columns, true)) {
+            $tokenColumn = 'device_token';
+        }
+    } catch (Exception $e) {
+        $tokenColumn = 'token';
+    }
+
     $data = json_decode(file_get_contents('php://input'), true);
 
     $validator = new Validator();
@@ -42,7 +59,7 @@ try {
     $deviceName = $data['device_name'] ?? null;
 
     // Check if token already exists
-    $checkQuery = "SELECT id, user_id FROM fcm_tokens WHERE token = :token";
+    $checkQuery = "SELECT id, user_id FROM fcm_tokens WHERE {$tokenColumn} = :token";
     $stmt = $db->prepare($checkQuery);
     $stmt->bindParam(':token', $data['token']);
     $stmt->execute();
@@ -69,7 +86,7 @@ try {
         }
     } else {
         // Insert new token
-        $insertQuery = "INSERT INTO fcm_tokens (user_id, token, device_type, device_name, is_active) 
+        $insertQuery = "INSERT INTO fcm_tokens (user_id, {$tokenColumn}, device_type, device_name, is_active) 
                        VALUES (:user_id, :token, :device_type, :device_name, TRUE)";
         $stmt = $db->prepare($insertQuery);
         $stmt->bindParam(':user_id', $user['id']);
