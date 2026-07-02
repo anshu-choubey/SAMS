@@ -225,37 +225,32 @@ try {
     $tokenResult = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($tokenResult && !empty($tokenResult['token'])) {
-        $fcmMessage = [
-            'token' => $tokenResult['token'],
-            'notification' => [
-                'title' => $title,
-                'body' => $message
-            ],
-            'data' => [
-                'notification_id' => (string)$notificationId,
-                'notification_class' => $notifClass,
-                'personalization_data' => json_encode($personalizationData),
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK'
-            ],
-            'android' => [
-                'priority' => 'high',
-                'notification' => [
-                    'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-                    'sound' => 'default',
-                    'color' => '#004687'
-                ]
-            ]
+        $firebaseConfig = new FirebaseConfig();
+
+        $fcmData = [
+            'notification_id' => (string)$notificationId,
+            'notification_class' => (string)$notifClass,
+            'click_action' => 'FLUTTER_NOTIFICATION_CLICK'
         ];
-        
-        try {
-            $response = Firebase\Messaging::send($fcmMessage);
-            
+
+        foreach ($personalizationData as $key => $value) {
+            $fcmData[$key] = is_scalar($value) || $value === null ? (string)$value : json_encode($value);
+        }
+
+        $response = $firebaseConfig->sendNotification(
+            $tokenResult['token'],
+            $title,
+            $message,
+            $fcmData
+        );
+
+        if (!empty($response['success'])) {
             // Update sent timestamp
             $updateQuery = "UPDATE notifications SET is_sent = TRUE, sent_at = NOW() WHERE id = :id";
             $stmt = $db->prepare($updateQuery);
             $stmt->bindParam(':id', $notificationId);
             $stmt->execute();
-            
+
             Response::success([
                 'notification_id' => $notificationId,
                 'target_user' => $targetUser['full_name'],
@@ -263,12 +258,14 @@ try {
                 'message' => $message,
                 'notification_class' => $notifClass,
                 'personalization_data' => $personalizationData,
-                'fcm_response' => $response
+                'fcm_response' => $response['response'] ?? $response
             ]);
-        } catch (Exception $e) {
-            // Store as unsent if FCM fails
-            Response::error('Failed to send FCM notification: ' . $e->getMessage(), 500);
         }
+
+        Response::error(
+            'Failed to send FCM notification: ' . json_encode($response['response'] ?? $response),
+            500
+        );
     } else {
         Response::error('No active FCM token found for user', 404);
     }

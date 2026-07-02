@@ -66,11 +66,11 @@ class StudentViewModel @Inject constructor(
     val storedFaceEmbeddingLoaded: StateFlow<Boolean> = _storedFaceEmbeddingLoaded.asStateFlow()
 
     // Notification LiveData
-    private val _notificationPreferencesState: MutableLiveData<UiState<Map<String, Any>>> = MutableLiveData()
-    val notificationPreferencesState: LiveData<UiState<Map<String, Any>>> = _notificationPreferencesState
+    private val _notificationPreferencesState: MutableLiveData<UiState<Map<String, Boolean>>> = MutableLiveData()
+    val notificationPreferencesState: LiveData<UiState<Map<String, Boolean>>> = _notificationPreferencesState
 
-    private val _notificationsState: MutableLiveData<UiState<List<Map<String, Any>>>> = MutableLiveData()
-    val notificationsState: LiveData<UiState<List<Map<String, Any>>>> = _notificationsState
+    private val _notificationsState: MutableLiveData<UiState<List<Notification>>> = MutableLiveData()
+    val notificationsState: LiveData<UiState<List<Notification>>> = _notificationsState
 
     // Auto-refresh jobs
     private var dashboardRefreshJob: Job? = null
@@ -294,18 +294,7 @@ class StudentViewModel @Inject constructor(
             _notificationPreferencesState.postValue(UiState.Loading)
             repository.getNotificationPreferences()
                 .onSuccess { preferences ->
-                    val preferencesMap = mapOf(
-                        "low_attendance" to (preferences["low_attendance"] as? Boolean ?: true),
-                        "perfect_attendance" to (preferences["perfect_attendance"] as? Boolean ?: true),
-                        "absent_today" to (preferences["absent_today"] as? Boolean ?: true),
-                        "schedule_reminder" to (preferences["schedule_reminder"] as? Boolean ?: true),
-                        "performance_praise" to (preferences["performance_praise"] as? Boolean ?: true),
-                        "custom" to (preferences["custom"] as? Boolean ?: true),
-                        "sound_enabled" to (preferences["sound_enabled"] as? Boolean ?: true),
-                        "vibration_enabled" to (preferences["vibration_enabled"] as? Boolean ?: true),
-                        "show_preview" to (preferences["show_preview"] as? Boolean ?: true)
-                    )
-                    _notificationPreferencesState.postValue(UiState.Success(preferencesMap))
+                    _notificationPreferencesState.postValue(UiState.Success(preferences))
                 }
                 .onFailure { error ->
                     _notificationPreferencesState.postValue(UiState.Error(error.message ?: "Failed to load preferences"))
@@ -313,7 +302,7 @@ class StudentViewModel @Inject constructor(
         }
     }
     
-    fun updateNotificationPreferences(preferences: Map<String, Any>) {
+    fun updateNotificationPreferences(preferences: Map<String, Boolean>) {
         viewModelScope.launch {
             _notificationPreferencesState.postValue(UiState.Loading)
             repository.updateNotificationPreferences(preferences)
@@ -331,8 +320,7 @@ class StudentViewModel @Inject constructor(
             _notificationsState.postValue(UiState.Loading)
             repository.getNotifications(unreadOnly)
                 .onSuccess { response ->
-                    val notificationsList = (response as? List<Map<String, Any>>) ?: emptyList()
-                    _notificationsState.postValue(UiState.Success(notificationsList))
+                    _notificationsState.postValue(UiState.Success(response))
                 }
                 .onFailure { error ->
                     _notificationsState.postValue(UiState.Error(error.message ?: "Failed to load notifications"))
