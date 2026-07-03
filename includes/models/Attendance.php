@@ -119,6 +119,7 @@ class Attendance {
 
     /**
      * Verify GPS proximity using Haversine formula
+     * Now with improved tolerance for GPS accuracy
      */
     private function verifyGPSProximity() {
         $earthRadius = 6371000; // meters
@@ -139,8 +140,25 @@ class Attendance {
         
         $this->distance_meters = round($earthRadius * $c, 2);
 
-        return $this->distance_meters <= GPS_PROXIMITY_RADIUS;
+        // Get base radius from config
+        $baseRadius = GPS_PROXIMITY_RADIUS;
+        
+        // Add tolerance based on GPS accuracy (if available)
+        $gpsAccuracy = $this->gps_accuracy ?? 0;
+        $accuracyTolerance = min($gpsAccuracy, 50); // Max 50m tolerance
+        $effectiveRadius = $baseRadius + $accuracyTolerance;
+        
+        // Soft boundary: 1.5x radius for borderline cases
+        $softBoundary = $baseRadius * 1.5;
+        
+        // Valid if within effective radius OR within soft boundary
+        // Soft boundary allows marking but could be flagged for review
+        return $this->distance_meters <= $effectiveRadius || 
+               $this->distance_meters <= $softBoundary;
     }
+    
+    // GPS accuracy property
+    public $gps_accuracy = 0;
 
     /**
      * Check if attendance already marked

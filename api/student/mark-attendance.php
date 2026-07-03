@@ -136,6 +136,7 @@ try {
     $attendance->teacher_latitude = $teacherLocation['latitude'];
     $attendance->teacher_longitude = $teacherLocation['longitude'];
     $attendance->face_confidence_score = $data['face_confidence'];
+    $attendance->gps_accuracy = isset($data['gps_accuracy']) ? (float)$data['gps_accuracy'] : 0;
 
     $result = $attendance->mark();
 

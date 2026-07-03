@@ -246,8 +246,32 @@ try {
         $data['longitude']
     );
 
-    // Verify GPS and Face
-    $gpsValid = $distance <= $gpsProximityRadius;
+    // ═══════════════════════════════════════════════════════════════════════
+    // IMPROVED GPS VALIDATION (More Lenient)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    // Get GPS accuracy from client (if provided)
+    $gpsAccuracy = isset($data['gps_accuracy']) ? (float)$data['gps_accuracy'] : 0;
+    
+    // Add tolerance based on GPS accuracy (max 50m extra tolerance)
+    $accuracyTolerance = min($gpsAccuracy, 50);
+    $effectiveRadius = $gpsProximityRadius + $accuracyTolerance;
+    
+    // Soft boundary: within 1.5x radius is "close enough" for soft pass
+    $softBoundary = $gpsProximityRadius * 1.5;
+    
+    // GPS validation levels:
+    // 1. Within radius = valid
+    // 2. Within effective radius (with accuracy) = valid  
+    // 3. Within soft boundary = soft_pass (allow but flag)
+    // 4. Beyond soft boundary = failed
+    
+    $gpsValid = $distance <= $effectiveRadius;
+    $gpsSoftPass = !$gpsValid && $distance <= $softBoundary;
+    
+    // Log GPS details for debugging
+    error_log("GPS Check: distance={$distance}m, radius={$gpsProximityRadius}m, accuracy={$gpsAccuracy}m, effective={$effectiveRadius}m");
+    
     $faceValid = $data['face_confidence'] >= $faceConfidenceThreshold;
     
     // Flag suspicious attempts (from security checks above)
@@ -263,6 +287,11 @@ try {
         $verificationStatus = $gpsValid && $faceValid ? 'pending_review' : ($gpsValid ? 'face_failed' : 'gps_failed');
     } elseif ($gpsValid && $faceValid) {
         $verificationStatus = 'success';
+    } elseif ($gpsSoftPass && $faceValid) {
+        // Within soft boundary with good face match - allow with flag
+        $verificationStatus = 'success';
+        $securityIssues[] = 'gps_soft_pass';
+        error_log("GPS soft pass: student {$user['id']} at {$distance}m (soft boundary: {$softBoundary}m)");
     } elseif (!$gpsValid && !$faceValid) {
         $verificationStatus = 'both_failed';
     } elseif (!$gpsValid) {
