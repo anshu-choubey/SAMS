@@ -23,6 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
+// Accept client's current time for timezone handling
+// Format: HH:mm:ss or Unix timestamp
+$clientTime = $_GET['client_time'] ?? null;
+$clientTimezone = $_GET['timezone'] ?? 'Asia/Kolkata';
+
 try {
     // Check authentication and role
     $user = Auth::user();
@@ -99,7 +104,7 @@ try {
     $stmt->execute();
     $avgAttendance = (float)($stmt->fetch(PDO::FETCH_ASSOC)['avg_attendance'] ?? 0);
 
-    // Get today's classes
+    // Get today's classes with interval settings
     $todayQuery = "SELECT DISTINCT
                     sc.id,
                     sub.id as subject_id,
@@ -111,6 +116,14 @@ try {
                     TIME_FORMAT(sc.end_time, '%H:%i:%s') as end_time,
                     sc.classroom,
                     sc.building,
+                    sc.total_checks,
+                    sc.min_interval_minutes,
+                    sc.max_interval_minutes,
+                    sc.response_window_minutes,
+                    sc.hide_timing_from_students,
+                    sc.random_intervals_enabled,
+                    sc.auto_trigger_enabled,
+                    sc.duration_minutes,
                     (SELECT COUNT(*) FROM students s WHERE s.department_id = ta.department_id AND s.semester = ta.semester 
                      AND (ta.section IS NULL OR s.section = ta.section)) as total_students,
                     sc.is_active,
@@ -131,7 +144,18 @@ try {
     $todayClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Format today's classes - matching TeacherScheduleItem model
-    $currentTime = date('H:i:s');
+    // Use client time if provided, otherwise use server time
+    if ($clientTime) {
+        // If timestamp, convert to time
+        if (is_numeric($clientTime)) {
+            $currentTime = date('H:i:s', (int)$clientTime);
+        } else {
+            $currentTime = $clientTime;
+        }
+    } else {
+        $currentTime = date('H:i:s');
+    }
+    
     $activeSession = null;
     $formattedTodaySchedule = array_map(function($class) use ($currentTime, &$activeSession) {
         $startTime = $class['start_time'];
@@ -177,8 +201,19 @@ try {
             'section' => $class['section'] ?? 'A',
             'classroom' => $class['classroom'],
             'session_active' => $sessionActive,
-            'is_startable' => !$sessionStarted && !$sessionEndedToday && $isStartTimeWindow,  // ✅ Can start if not already started and not already ended
-            'is_completed' => $sessionEndedToday || (!$isWithinTime && $currentTime > $endTime)  // ✅ Completed if teacher ended it or time has passed
+            'is_startable' => !$sessionStarted && !$sessionEndedToday && $isStartTimeWindow,
+            'is_completed' => $sessionEndedToday || (!$isWithinTime && $currentTime > $endTime),
+            // Interval settings for this schedule
+            'interval_settings' => [
+                'total_checks' => (int)($class['total_checks'] ?? 3),
+                'min_interval_minutes' => (int)($class['min_interval_minutes'] ?? 10),
+                'max_interval_minutes' => (int)($class['max_interval_minutes'] ?? 25),
+                'response_window_minutes' => (int)($class['response_window_minutes'] ?? 3),
+                'hide_timing_from_students' => (bool)($class['hide_timing_from_students'] ?? true),
+                'random_intervals_enabled' => (bool)($class['random_intervals_enabled'] ?? true),
+                'auto_trigger_enabled' => (bool)($class['auto_trigger_enabled'] ?? true),
+                'duration_minutes' => (int)($class['duration_minutes'] ?? 60)
+            ]
         ];
     }, $todayClasses);
     

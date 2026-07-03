@@ -90,8 +90,13 @@ try {
         Response::error('This schedule is not assigned to you', 403);
     }
 
-    // Now get full schedule details
-    $scheduleQuery = "SELECT sc.*, ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section, ta.is_active as assignment_active
+    // Now get full schedule details including interval settings
+    $scheduleQuery = "SELECT sc.*, 
+                             sc.total_checks, sc.min_interval_minutes, sc.max_interval_minutes,
+                             sc.response_window_minutes, sc.hide_timing_from_students,
+                             sc.random_intervals_enabled, sc.auto_trigger_enabled, sc.duration_minutes,
+                             ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section, 
+                             ta.is_active as assignment_active
                       FROM schedules sc
                       LEFT JOIN teacher_assignments ta ON sc.assignment_id = ta.id
                       WHERE sc.id = :schedule_id AND sc.is_active = TRUE";
@@ -119,20 +124,16 @@ try {
         Response::error('Class session already started', 400);
     }
 
-    // Get duration (default 60 minutes)
-    $durationMinutes = isset($data['duration_minutes']) ? (int)$data['duration_minutes'] : 60;
-    $notes = $data['notes'] ?? null;
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERVAL CONFIGURATION - Priority: Request > Schedule > System Settings
+    // ═══════════════════════════════════════════════════════════════════════
     
-    // Multi-check configuration (default: enabled with 2-3 random checks)
-    $multiCheckEnabled = isset($data['multi_check_enabled']) ? (bool)$data['multi_check_enabled'] : true;
-    $totalChecksPlanned = isset($data['total_checks']) ? (int)$data['total_checks'] : rand(2, 3);
-    
-    // Auto-schedule configuration (intervals: 20min, 40min, 60min)
-    $autoSchedule = isset($data['auto_schedule']) ? (bool)$data['auto_schedule'] : false;
-    $firstCheckDelay = isset($data['first_check_delay']) ? (int)$data['first_check_delay'] : 20; // minutes
-    
-    // Random interval configuration (NEW)
-    // Get defaults from system settings
+    // Step 1: Start with defaults
+    $durationMinutes = 60;
+    $multiCheckEnabled = true;
+    $totalChecksPlanned = 3;
+    $autoSchedule = true;
+    $firstCheckDelay = 10;
     $randomIntervalsEnabled = true;
     $minIntervalMinutes = 10;
     $maxIntervalMinutes = 25;
@@ -140,6 +141,7 @@ try {
     $autoTriggerChecks = true;
     $responseWindowMinutes = 3;
     
+    // Step 2: Apply system-wide settings
     try {
         $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
             'attendance_random_intervals_enabled',
@@ -176,7 +178,49 @@ try {
         // Use defaults if settings fetch fails
     }
     
-    // Override with request data if provided
+    // Step 3: Apply SCHEDULE-SPECIFIC settings (override system settings)
+    // These are set by admin per-class
+    if (isset($schedule['total_checks']) && $schedule['total_checks'] !== null) {
+        $totalChecksPlanned = (int)$schedule['total_checks'];
+    }
+    if (isset($schedule['min_interval_minutes']) && $schedule['min_interval_minutes'] !== null) {
+        $minIntervalMinutes = (int)$schedule['min_interval_minutes'];
+    }
+    if (isset($schedule['max_interval_minutes']) && $schedule['max_interval_minutes'] !== null) {
+        $maxIntervalMinutes = (int)$schedule['max_interval_minutes'];
+    }
+    if (isset($schedule['response_window_minutes']) && $schedule['response_window_minutes'] !== null) {
+        $responseWindowMinutes = (int)$schedule['response_window_minutes'];
+    }
+    if (isset($schedule['hide_timing_from_students']) && $schedule['hide_timing_from_students'] !== null) {
+        $hideTimingFromStudents = (bool)$schedule['hide_timing_from_students'];
+    }
+    if (isset($schedule['random_intervals_enabled']) && $schedule['random_intervals_enabled'] !== null) {
+        $randomIntervalsEnabled = (bool)$schedule['random_intervals_enabled'];
+    }
+    if (isset($schedule['auto_trigger_enabled']) && $schedule['auto_trigger_enabled'] !== null) {
+        $autoTriggerChecks = (bool)$schedule['auto_trigger_enabled'];
+    }
+    if (isset($schedule['duration_minutes']) && $schedule['duration_minutes'] !== null) {
+        $durationMinutes = (int)$schedule['duration_minutes'];
+    }
+    
+    // Step 4: Apply REQUEST data (teacher can override at session start)
+    if (isset($data['duration_minutes'])) {
+        $durationMinutes = (int)$data['duration_minutes'];
+    }
+    if (isset($data['multi_check_enabled'])) {
+        $multiCheckEnabled = (bool)$data['multi_check_enabled'];
+    }
+    if (isset($data['total_checks'])) {
+        $totalChecksPlanned = (int)$data['total_checks'];
+    }
+    if (isset($data['auto_schedule'])) {
+        $autoSchedule = (bool)$data['auto_schedule'];
+    }
+    if (isset($data['first_check_delay'])) {
+        $firstCheckDelay = (int)$data['first_check_delay'];
+    }
     if (isset($data['random_intervals_enabled'])) {
         $randomIntervalsEnabled = (bool)$data['random_intervals_enabled'];
     }
@@ -195,6 +239,8 @@ try {
     if (isset($data['response_window_minutes'])) {
         $responseWindowMinutes = (int)$data['response_window_minutes'];
     }
+    
+    $notes = $data['notes'] ?? null;
 
     // Generate first check time (random interval from class start)
     $firstCheckMinutes = $randomIntervalsEnabled 
