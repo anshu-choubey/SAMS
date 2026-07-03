@@ -11,23 +11,23 @@
 
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../../config/firebase.php';
-require_once __DIR__ . '/../../includes/middleware/CORS.php';
-require_once __DIR__ . '/../../includes/middleware/Auth.php';
-require_once __DIR__ . '/../../includes/helpers/Response.php';
-require_once __DIR__ . '/../../includes/helpers/Validator.php';
-
-CORS::handle();
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-    exit;
-}
-
 try {
+    require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../config/constants.php';
+    require_once __DIR__ . '/../../../config/firebase.php';
+    require_once __DIR__ . '/../../includes/middleware/CORS.php';
+    require_once __DIR__ . '/../../includes/middleware/Auth.php';
+    require_once __DIR__ . '/../../includes/helpers/Response.php';
+    require_once __DIR__ . '/../../includes/helpers/Validator.php';
+
+    CORS::handle();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+        exit;
+    }
+
     Auth::hasRole('admin', 'teacher');
     $user = Auth::user();
     
