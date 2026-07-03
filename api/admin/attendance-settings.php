@@ -23,16 +23,13 @@ try {
     $db = $database->getConnection();
 
     $settingsConfig = [
-        'attendance_multi_check_enabled'    => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable multi-check attendance'],
-        'attendance_default_total_checks'   => ['type' => 'integer', 'default' => '2',     'label' => 'Number of checks per class'],
-        'attendance_random_intervals_enabled' => ['type' => 'boolean', 'default' => 'true', 'label' => 'Random interval timing'],
-        'attendance_min_check_interval'     => ['type' => 'integer', 'default' => '10',    'label' => 'Min minutes between checks'],
-        'attendance_max_check_interval'     => ['type' => 'integer', 'default' => '25',    'label' => 'Max minutes between checks'],
-        'attendance_check_window_minutes'   => ['type' => 'integer', 'default' => '3',     'label' => 'Response window (minutes)'],
-        'attendance_hide_timing_from_students' => ['type' => 'boolean', 'default' => 'true', 'label' => 'Hide check times from students'],
-        'face_confidence_threshold'         => ['type' => 'integer', 'default' => '75',    'label' => 'Face match % required'],
-        'liveness_detection_enabled'        => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable liveness detection'],
-        'gps_proximity_radius'              => ['type' => 'integer', 'default' => '50',    'label' => 'GPS radius (meters)'],
+        'attendance_multi_check_enabled'      => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable multi-check attendance'],
+        'attendance_default_total_checks'     => ['type' => 'integer', 'default' => '2',     'label' => 'Number of checks per class'],
+        'attendance_check_window_minutes'     => ['type' => 'integer', 'default' => '3',     'label' => 'Response window (minutes)'],
+        'attendance_hide_timing_from_students'=> ['type' => 'boolean', 'default' => 'true',  'label' => 'Hide check times from students'],
+        'face_confidence_threshold'           => ['type' => 'integer', 'default' => '75',    'label' => 'Face match % required'],
+        'liveness_detection_enabled'          => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable liveness detection'],
+        'gps_proximity_radius'                => ['type' => 'integer', 'default' => '50',    'label' => 'GPS radius (meters)'],
     ];
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {

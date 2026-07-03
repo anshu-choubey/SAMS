@@ -325,7 +325,7 @@ try {
 
     $responseId = $db->lastInsertId();
 
-    // Get total successful checks for this student in this session
+    // Get total successful checks and total planned for this session
     $statsQuery = "SELECT 
                     COUNT(*) as total_responses,
                     SUM(CASE WHEN verification_status = 'success' THEN 1 ELSE 0 END) as successful_checks
@@ -337,6 +337,59 @@ try {
     $stmt->execute();
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // Get total checks planned for this session
+    $planQuery = "SELECT total_checks_planned, schedule_id, assignment_id, department_id, teacher_id
+                  FROM teacher_locations WHERE id = :session_id";
+    $stmt = $db->prepare($planQuery);
+    $stmt->bindParam(':session_id', $checkPoint['session_id']);
+    $stmt->execute();
+    $sessionInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $totalPlanned = (int)($sessionInfo['total_checks_planned'] ?? 0);
+    $successfulChecks = (int)$stats['successful_checks'];
+    $allChecksComplete = $totalPlanned > 0 && $successfulChecks >= $totalPlanned;
+    $attendanceMarked = false;
+
+    // Auto-mark attendance when ALL checks are completed successfully
+    if ($allChecksComplete && $verificationStatus === 'success') {
+        $existingAttendance = "SELECT id FROM attendance 
+                               WHERE student_id = :student_id 
+                               AND schedule_id = :schedule_id 
+                               AND attendance_date = CURDATE()";
+        $stmt = $db->prepare($existingAttendance);
+        $stmt->bindParam(':student_id', $studentData['id']);
+        $stmt->bindParam(':schedule_id', $sessionInfo['schedule_id']);
+        $stmt->execute();
+        
+        if (!$stmt->fetch()) {
+            $markQuery = "INSERT INTO attendance 
+                          (student_id, schedule_id, assignment_id, teacher_id, department_id,
+                           attendance_date, status, face_confidence_score, 
+                           student_latitude, student_longitude,
+                           teacher_latitude, teacher_longitude, distance_meters,
+                           verification_status, marked_at)
+                          VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id,
+                                  CURDATE(), 'present', :face_confidence,
+                                  :student_lat, :student_lon,
+                                  :teacher_lat, :teacher_lon, :distance,
+                                  'success', NOW())";
+            $stmt = $db->prepare($markQuery);
+            $stmt->bindParam(':student_id', $studentData['id']);
+            $stmt->bindParam(':schedule_id', $sessionInfo['schedule_id']);
+            $stmt->bindParam(':assignment_id', $sessionInfo['assignment_id']);
+            $stmt->bindParam(':teacher_id', $sessionInfo['teacher_id']);
+            $stmt->bindParam(':department_id', $sessionInfo['department_id']);
+            $stmt->bindParam(':face_confidence', $data['face_confidence']);
+            $stmt->bindParam(':student_lat', $data['latitude']);
+            $stmt->bindParam(':student_lon', $data['longitude']);
+            $stmt->bindParam(':teacher_lat', $checkPoint['teacher_latitude']);
+            $stmt->bindParam(':teacher_lon', $checkPoint['teacher_longitude']);
+            $stmt->bindParam(':distance', $distance);
+            $stmt->execute();
+            $attendanceMarked = true;
+        }
+    }
+
     Response::success([
         'response_id' => (int)$responseId,
         'check_point_id' => (int)$data['check_point_id'],
@@ -346,8 +399,13 @@ try {
         'face_confidence' => (float)$data['face_confidence'],
         'is_late' => $isLate,
         'total_responses' => (int)$stats['total_responses'],
-        'successful_checks' => (int)$stats['successful_checks']
-    ], $verificationStatus === 'success' ? 'Check-in successful!' : 'Check-in recorded with issues');
+        'successful_checks' => $successfulChecks,
+        'total_checks_planned' => $totalPlanned,
+        'all_checks_complete' => $allChecksComplete,
+        'attendance_marked' => $attendanceMarked
+    ], $allChecksComplete 
+        ? 'All checks complete — attendance marked!' 
+        : ($verificationStatus === 'success' ? 'Check-in successful!' : 'Check-in recorded with issues'));
 
 } catch (Exception $e) {
     error_log('Respond attendance check error: ' . $e->getMessage());

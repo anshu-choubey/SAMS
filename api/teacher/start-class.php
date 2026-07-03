@@ -125,15 +125,14 @@ try {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // INTERVAL CONFIGURATION - Priority: Request > Schedule > System Settings
+    // INTERVAL CONFIGURATION - from Admin Panel settings only
     // ═══════════════════════════════════════════════════════════════════════
     
-    // Step 1: Initialize variables (will be populated from DB)
     $durationMinutes = 60;
     $multiCheckEnabled = true;
-    $totalChecksPlanned = 1;
+    $totalChecksPlanned = 2;
     $autoSchedule = true;
-    $firstCheckDelay = 10;
+    $firstCheckDelay = 1;
     $randomIntervalsEnabled = true;
     $minIntervalMinutes = 10;
     $maxIntervalMinutes = 25;
@@ -141,9 +140,14 @@ try {
     $autoTriggerChecks = true;
     $responseWindowMinutes = 3;
     
-    // Step 2: Load ALL settings from database
+    // Load settings from admin panel (system_settings table)
     try {
-        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` LIKE 'attendance_%'";
+        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
+            'attendance_multi_check_enabled', 'attendance_default_total_checks',
+            'attendance_random_intervals_enabled', 'attendance_min_check_interval',
+            'attendance_max_check_interval', 'attendance_check_window_minutes',
+            'attendance_hide_timing_from_students'
+        )";
         $stmt = $db->query($settingsQuery);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             switch ($row['key']) {
@@ -156,40 +160,21 @@ try {
                 case 'attendance_random_intervals_enabled':
                     $randomIntervalsEnabled = $row['value'] === 'true' || $row['value'] === '1';
                     break;
-                case 'attendance_min_interval_minutes':
-                    $minIntervalMinutes = (int)$row['value'];
-                    break;
-                case 'attendance_max_interval_minutes':
-                    $maxIntervalMinutes = (int)$row['value'];
-                    break;
                 case 'attendance_min_check_interval':
                     $minIntervalMinutes = (int)$row['value'];
                     break;
                 case 'attendance_max_check_interval':
                     $maxIntervalMinutes = (int)$row['value'];
                     break;
-                case 'attendance_hide_timing_from_students':
-                    $hideTimingFromStudents = $row['value'] === 'true' || $row['value'] === '1';
-                    break;
-                case 'attendance_auto_trigger_enabled':
-                    $autoTriggerChecks = $row['value'] === 'true' || $row['value'] === '1';
-                    break;
-                case 'attendance_response_window_minutes':
-                    $responseWindowMinutes = (int)$row['value'];
-                    break;
                 case 'attendance_check_window_minutes':
                     $responseWindowMinutes = (int)$row['value'];
                     break;
-                case 'attendance_first_check_delay':
-                    $firstCheckDelay = (int)$row['value'];
-                    break;
-                case 'attendance_auto_schedule_enabled':
-                    $autoSchedule = $row['value'] === 'true' || $row['value'] === '1';
+                case 'attendance_hide_timing_from_students':
+                    $hideTimingFromStudents = $row['value'] === 'true' || $row['value'] === '1';
                     break;
             }
         }
     } catch (Exception $e) {
-        // Use defaults if settings fetch fails
         error_log("Failed to load attendance settings: " . $e->getMessage());
     }
     
@@ -218,41 +203,6 @@ try {
     }
     if (isset($schedule['duration_minutes']) && $schedule['duration_minutes'] !== null) {
         $durationMinutes = (int)$schedule['duration_minutes'];
-    }
-    
-    // Step 4: Apply REQUEST data (teacher can override at session start)
-    if (isset($data['duration_minutes'])) {
-        $durationMinutes = (int)$data['duration_minutes'];
-    }
-    if (isset($data['multi_check_enabled'])) {
-        $multiCheckEnabled = (bool)$data['multi_check_enabled'];
-    }
-    if (isset($data['total_checks'])) {
-        $totalChecksPlanned = (int)$data['total_checks'];
-    }
-    if (isset($data['auto_schedule'])) {
-        $autoSchedule = (bool)$data['auto_schedule'];
-    }
-    if (isset($data['first_check_delay'])) {
-        $firstCheckDelay = (int)$data['first_check_delay'];
-    }
-    if (isset($data['random_intervals_enabled'])) {
-        $randomIntervalsEnabled = (bool)$data['random_intervals_enabled'];
-    }
-    if (isset($data['min_interval_minutes'])) {
-        $minIntervalMinutes = (int)$data['min_interval_minutes'];
-    }
-    if (isset($data['max_interval_minutes'])) {
-        $maxIntervalMinutes = (int)$data['max_interval_minutes'];
-    }
-    if (isset($data['hide_timing_from_students'])) {
-        $hideTimingFromStudents = (bool)$data['hide_timing_from_students'];
-    }
-    if (isset($data['auto_trigger_checks'])) {
-        $autoTriggerChecks = (bool)$data['auto_trigger_checks'];
-    }
-    if (isset($data['response_window_minutes'])) {
-        $responseWindowMinutes = (int)$data['response_window_minutes'];
     }
     
     $notes = $data['notes'] ?? null;

@@ -35,9 +35,6 @@ try {
                     'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
                     'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                     'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 2),
-                    'random_intervals_enabled' => getSetting($db, 'attendance_random_intervals_enabled', true),
-                    'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
-                    'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
                     'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
                     'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true)
                 ];
@@ -80,9 +77,6 @@ try {
                         'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
                         'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                         'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 2),
-                        'random_intervals_enabled' => getSetting($db, 'attendance_random_intervals_enabled', true),
-                        'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
-                        'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
                         'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
                         'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true)
                     ],
