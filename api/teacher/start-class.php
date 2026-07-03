@@ -383,10 +383,10 @@ try {
         'max_interval_minutes' => $maxIntervalMinutes,
         'hide_timing_from_students' => $hideTimingFromStudents,
         'response_window_minutes' => $responseWindowMinutes,
-        // Teacher sees scheduled times
-        'scheduled_check_times' => $checkTimesForTeacher,
-        // For backward compatibility
-        'scheduled_check_intervals' => $scheduledIntervals
+        // ✅ FIX: Android expects List<Int> for scheduled_check_times (minutes from start)
+        'scheduled_check_times' => $scheduledIntervals,
+        // Detailed check info (for admin/web use)
+        'scheduled_check_details' => $checkTimesForTeacher
     ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance with random intervals ({$totalChecksPlanned} checks). " . ($hideTimingFromStudents ? "Timing hidden from students." : "") : 'Single attendance check.'));
 
 } catch (Exception $e) {
