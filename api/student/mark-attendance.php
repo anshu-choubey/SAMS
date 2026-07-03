@@ -19,22 +19,21 @@ require_once __DIR__ . '/../../includes/helpers/Validator.php';
 
 function getSystemSettingValue(PDO $db, string $settingKey, $defaultValue = null) {
     try {
-        foreach (['setting_value', 'value'] as $valueColumn) {
+        $queries = [
+            "SELECT value FROM system_settings WHERE `key` = :k LIMIT 1",
+            "SELECT setting_value AS value FROM system_settings WHERE setting_key = :k LIMIT 1"
+        ];
+        foreach ($queries as $query) {
             try {
-                $query = "SELECT {$valueColumn} AS setting_value FROM system_settings WHERE setting_key = :setting_key LIMIT 1";
                 $stmt = $db->prepare($query);
-                $stmt->bindParam(':setting_key', $settingKey);
+                $stmt->bindParam(':k', $settingKey);
                 $stmt->execute();
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($result && array_key_exists('setting_value', $result) && $result['setting_value'] !== null) {
-                    return $result['setting_value'];
+                if ($result && isset($result['value']) && $result['value'] !== null) {
+                    return $result['value'];
                 }
-            } catch (Exception $innerException) {
-                continue;
-            }
+            } catch (Exception $e) { continue; }
         }
-
         return $defaultValue;
     } catch (Exception $e) {
         return $defaultValue;
@@ -123,7 +122,13 @@ try {
         Response::error('Teacher has not started the attendance session yet', 400);
     }
 
-    // Mark attendance
+    // If multi-check is enabled, don't mark attendance directly
+    $multiCheckEnabled = getSystemSettingValue($db, 'attendance_multi_check_enabled', 'true');
+    if ($multiCheckEnabled === 'true' || $multiCheckEnabled === '1') {
+        Response::error('Multi-check attendance is enabled. Complete all attendance checks instead.', 400);
+    }
+
+    // Mark attendance (only when multi-check is disabled)
     $attendance = new Attendance($db);
     $attendance->student_id = $studentData['id'];
     $attendance->schedule_id = $data['schedule_id'];
