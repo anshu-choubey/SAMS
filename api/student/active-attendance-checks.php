@@ -7,6 +7,8 @@
  * - Students see only check count and current active check
  * - Exact timing/scheduling is hidden
  * - Students must stay on attendance screen to respond
+ * 
+ * LAZY ACTIVATION: Also triggers due scheduled checks (no cron needed)
  */
 
 header('Content-Type: application/json');
@@ -36,6 +38,67 @@ try {
     // Get database connection
     $database = new Database();
     $db = $database->getConnection();
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // LAZY ACTIVATION: Trigger any due scheduled checks
+    // This replaces the need for a cron job
+    // ═══════════════════════════════════════════════════════════════════════
+    $now = date('Y-m-d H:i:s');
+    
+    // Find and activate due scheduled checks
+    $dueQuery = "SELECT acp.id, acp.session_id, acp.check_number
+                 FROM attendance_check_points acp
+                 JOIN teacher_locations tl ON acp.session_id = tl.id
+                 WHERE acp.is_scheduled = TRUE 
+                 AND acp.is_active = FALSE
+                 AND acp.was_auto_triggered = FALSE
+                 AND acp.scheduled_time <= :now
+                 AND acp.window_end_time > :now2
+                 AND tl.is_active = TRUE
+                 AND tl.auto_trigger_checks = TRUE
+                 LIMIT 10";
+    
+    $stmt = $db->prepare($dueQuery);
+    $stmt->bindParam(':now', $now);
+    $stmt->bindParam(':now2', $now);
+    $stmt->execute();
+    $dueChecks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($dueChecks as $check) {
+        // Activate this check point
+        $activateQuery = "UPDATE attendance_check_points 
+                          SET is_active = TRUE, was_auto_triggered = TRUE, check_time = :now
+                          WHERE id = :id AND is_active = FALSE";
+        $stmt = $db->prepare($activateQuery);
+        $stmt->bindParam(':now', $now);
+        $stmt->bindParam(':id', $check['id']);
+        $stmt->execute();
+        
+        // Update session's next check time
+        $updateSessionQuery = "UPDATE teacher_locations 
+                               SET checks_completed = checks_completed + 1,
+                                   next_check_time = (
+                                       SELECT MIN(scheduled_time) 
+                                       FROM attendance_check_points 
+                                       WHERE session_id = :session_id 
+                                       AND is_scheduled = TRUE 
+                                       AND is_active = FALSE 
+                                       AND was_auto_triggered = FALSE
+                                   )
+                               WHERE id = :session_id";
+        $stmt = $db->prepare($updateSessionQuery);
+        $stmt->bindParam(':session_id', $check['session_id']);
+        $stmt->execute();
+    }
+    
+    // Also expire old checks
+    $expireQuery = "UPDATE attendance_check_points 
+                    SET is_active = FALSE 
+                    WHERE is_active = TRUE 
+                    AND window_end_time < :now";
+    $stmt = $db->prepare($expireQuery);
+    $stmt->bindParam(':now', $now);
+    $stmt->execute();
 
     // Get student profile
     $student = new Student($db);
