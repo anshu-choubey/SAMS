@@ -144,14 +144,21 @@ function getSetting($db, $key, $default = null) {
         }
         
         $value = $result['value'];
+        $type = $result['type'] ?? null;
         
-        // Cast based on type
-        if ($result['type'] === 'integer') {
+        if ($type === 'integer' || $type === 'number') {
             return intval($value);
-        } elseif ($result['type'] === 'float') {
+        } elseif ($type === 'float') {
             return floatval($value);
-        } elseif ($result['type'] === 'boolean') {
+        } elseif ($type === 'boolean') {
             return $value === '1' || strtolower($value) === 'true';
+        }
+        
+        if ($type === null && is_numeric($value) && strpos($value, '.') === false) {
+            return intval($value);
+        }
+        if ($type === null && ($value === 'true' || $value === 'false')) {
+            return $value === 'true';
         }
         
         return $value;
