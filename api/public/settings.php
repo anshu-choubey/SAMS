@@ -33,8 +33,14 @@ try {
                 $settings = [
                     'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
                     'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
-                    'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
-                    'enableLivenessDetection' => getSetting($db, 'enable_liveness_detection', true)
+                    'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
+                    'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
+                    'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 1),
+                    'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
+                    'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
+                    'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
+                    'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true),
+                    'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true)
                 ];
                 Response::success($settings);
                 break;
@@ -72,8 +78,14 @@ try {
                     'attendance' => [
                         'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
                         'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
-                        'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 85),
-                        'enableLivenessDetection' => getSetting($db, 'enable_liveness_detection', true)
+                        'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
+                        'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
+                        'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 1),
+                        'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
+                        'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
+                        'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
+                        'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true),
+                        'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true)
                     ],
                     'system' => [
                         'session_timeout' => 3600,
