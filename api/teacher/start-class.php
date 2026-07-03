@@ -126,13 +126,18 @@ try {
     // Multi-check configuration (default: enabled with 2-3 random checks)
     $multiCheckEnabled = isset($data['multi_check_enabled']) ? (bool)$data['multi_check_enabled'] : true;
     $totalChecksPlanned = isset($data['total_checks']) ? (int)$data['total_checks'] : rand(2, 3);
+    
+    // Auto-schedule configuration (intervals: 20min, 40min, 60min)
+    $autoSchedule = isset($data['auto_schedule']) ? (bool)$data['auto_schedule'] : false;
+    $firstCheckDelay = isset($data['first_check_delay']) ? (int)$data['first_check_delay'] : 20; // minutes
 
     // Start class session - insert into teacher_locations
     $insertQuery = "INSERT INTO teacher_locations 
                     (teacher_id, schedule_id, assignment_id, department_id, latitude, longitude, 
-                     is_active, session_start, multi_check_enabled, total_checks_planned)
+                     is_active, session_start, multi_check_enabled, total_checks_planned, 
+                     auto_schedule, first_check_delay)
                     VALUES (:teacher_id, :schedule_id, :assignment_id, :department_id, :latitude, :longitude, 
-                            TRUE, NOW(), :multi_check, :total_checks)";
+                            TRUE, NOW(), :multi_check, :total_checks, :auto_schedule, :first_check_delay)";
     $stmt = $db->prepare($insertQuery);
     $stmt->bindParam(':teacher_id', $teacher['id']);
     $stmt->bindParam(':schedule_id', $data['schedule_id']);
@@ -142,6 +147,8 @@ try {
     $stmt->bindParam(':longitude', $data['longitude']);
     $stmt->bindParam(':multi_check', $multiCheckEnabled, PDO::PARAM_BOOL);
     $stmt->bindParam(':total_checks', $totalChecksPlanned);
+    $stmt->bindParam(':auto_schedule', $autoSchedule, PDO::PARAM_BOOL);
+    $stmt->bindParam(':first_check_delay', $firstCheckDelay);
     $stmt->execute();
 
     $sessionId = $db->lastInsertId();
@@ -158,6 +165,43 @@ try {
     ]);
     $qrCode = base64_encode($qrData);
 
+    // Auto-schedule checks if enabled
+    if ($multiCheckEnabled && $autoSchedule && $totalChecksPlanned > 0) {
+        // Calculate random intervals (spread across duration)
+        $intervals = [];
+        $remainingTime = $durationMinutes - $firstCheckDelay;
+        $intervalGap = floor($remainingTime / max(1, $totalChecksPlanned - 1));
+        
+        for ($i = 0; $i < $totalChecksPlanned; $i++) {
+            if ($i == 0) {
+                $intervals[] = $firstCheckDelay;
+            } else {
+                // Add randomness: ±5 minutes
+                $baseInterval = $firstCheckDelay + ($intervalGap * $i);
+                $randomOffset = rand(-5, 5);
+                $intervals[] = max($firstCheckDelay, min($durationMinutes - 5, $baseInterval + $randomOffset));
+            }
+        }
+        
+        // Store scheduled times
+        foreach ($intervals as $index => $minutesFromStart) {
+            $scheduledTime = date('Y-m-d H:i:s', strtotime("+{$minutesFromStart} minutes"));
+            $windowEnd = date('Y-m-d H:i:s', strtotime("+5 minutes", strtotime($scheduledTime)));
+            
+            $scheduleQuery = "INSERT INTO attendance_check_points 
+                              (session_id, schedule_id, check_number, check_time, window_end_time, is_active)
+                              VALUES (:session_id, :schedule_id, :check_number, :check_time, :window_end, FALSE)";
+            $stmt = $db->prepare($scheduleQuery);
+            $stmt->bindParam(':session_id', $sessionId);
+            $stmt->bindParam(':schedule_id', $data['schedule_id']);
+            $checkNumber = $index + 1;
+            $stmt->bindParam(':check_number', $checkNumber);
+            $stmt->bindParam(':check_time', $scheduledTime);
+            $stmt->bindParam(':window_end', $windowEnd);
+            $stmt->execute();
+        }
+    }
+    
     // Return ClassSession response
     Response::success([
         'session_id' => (int)$sessionId,
@@ -167,8 +211,10 @@ try {
         'qr_code' => $qrCode,
         'attendance_window_minutes' => $durationMinutes,
         'multi_check_enabled' => $multiCheckEnabled,
-        'total_checks_planned' => $totalChecksPlanned
-    ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance enabled ({$totalChecksPlanned} random checks planned)." : 'Single attendance check.'));
+        'total_checks_planned' => $totalChecksPlanned,
+        'auto_schedule' => $autoSchedule,
+        'scheduled_check_times' => $autoSchedule ? $intervals : []
+    ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance enabled ({$totalChecksPlanned} " . ($autoSchedule ? "auto-scheduled" : "manual") . " checks planned)." : 'Single attendance check.'));
 
 } catch (Exception $e) {
     http_response_code(500);
