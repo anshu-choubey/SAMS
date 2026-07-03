@@ -257,7 +257,9 @@ try {
         $hideTiming = isset($session['hide_timing_from_students']) && 
                       ($session['hide_timing_from_students'] === '1' || $session['hide_timing_from_students'] === true);
         
-        $checksRemaining = max(0, (int)($session['total_checks_planned'] ?? 0) - (int)($session['checks_completed'] ?? 0));
+        $totalPlanned = (int)($session['total_checks_planned'] ?? 0);
+        $studentSuccess = (int)($session['student_successful_checks'] ?? 0);
+        $checksRemaining = max(0, $totalPlanned - $studentSuccess);
         
         return [
             'session_id' => (int)$session['session_id'],
@@ -265,9 +267,9 @@ try {
             'subject_code' => $session['subject_code'],
             'teacher_name' => $session['teacher_name'],
             'classroom' => $session['classroom'],
-            'total_checks_planned' => (int)($session['total_checks_planned'] ?? 0),
+            'total_checks_planned' => $totalPlanned,
             'checks_completed' => (int)($session['checks_completed'] ?? 0),
-            'student_successful_checks' => (int)($session['student_successful_checks'] ?? 0),
+            'student_successful_checks' => $studentSuccess,
             'checks_remaining' => $checksRemaining,
             'hide_timing' => $hideTiming,
             'random_intervals' => isset($session['random_intervals_enabled']) && 
@@ -277,6 +279,60 @@ try {
                 : null
         ];
     }, $activeSessions);
+
+    // Retroactive auto-mark: if student completed all checks but attendance wasn't recorded
+    foreach ($activeSessions as $session) {
+        $totalPlanned = (int)($session['total_checks_planned'] ?? 0);
+        $studentSuccess = (int)($session['student_successful_checks'] ?? 0);
+        
+        if ($totalPlanned > 0 && $studentSuccess >= $totalPlanned) {
+            // Check if attendance already exists
+            $existsQuery = "SELECT id FROM attendance 
+                            WHERE student_id = :sid AND schedule_id = (SELECT schedule_id FROM teacher_locations WHERE id = :sess_id)
+                            AND attendance_date = CURDATE()";
+            $stmt = $db->prepare($existsQuery);
+            $stmt->bindParam(':sid', $studentData['id']);
+            $stmt->bindParam(':sess_id', $session['session_id']);
+            $stmt->execute();
+            
+            if (!$stmt->fetch()) {
+                try {
+                    $sessQuery = "SELECT schedule_id, assignment_id, department_id, teacher_id, latitude, longitude 
+                                  FROM teacher_locations WHERE id = :sess_id";
+                    $stmt = $db->prepare($sessQuery);
+                    $stmt->bindParam(':sess_id', $session['session_id']);
+                    $stmt->execute();
+                    $sessInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($sessInfo) {
+                        $markQuery = "INSERT INTO attendance 
+                                      (student_id, schedule_id, assignment_id, teacher_id, department_id,
+                                       attendance_date, status, face_confidence_score,
+                                       student_latitude, student_longitude,
+                                       teacher_latitude, teacher_longitude, distance_meters,
+                                       verification_status)
+                                      VALUES (:sid, :sched, :assign, :tid, :did,
+                                              CURDATE(), 'present', 0,
+                                              0, 0,
+                                              :tlat, :tlon, 0,
+                                              'success')";
+                        $stmt = $db->prepare($markQuery);
+                        $stmt->bindParam(':sid', $studentData['id']);
+                        $stmt->bindParam(':sched', $sessInfo['schedule_id']);
+                        $stmt->bindParam(':assign', $sessInfo['assignment_id']);
+                        $stmt->bindParam(':tid', $sessInfo['teacher_id']);
+                        $stmt->bindParam(':did', $sessInfo['department_id']);
+                        $stmt->bindParam(':tlat', $sessInfo['latitude']);
+                        $stmt->bindParam(':tlon', $sessInfo['longitude']);
+                        $stmt->execute();
+                        error_log("Retroactive auto-mark: student {$studentData['id']} session {$session['session_id']}");
+                    }
+                } catch (Exception $e) {
+                    error_log("Retroactive auto-mark failed: " . $e->getMessage());
+                }
+            }
+        }
+    }
 
     // Derive flags from session data (which uses admin settings applied at start-class time)
     $shouldStayOnScreen = false;
