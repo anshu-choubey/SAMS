@@ -21,7 +21,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
     $key = $_POST['setting_key'] ?? '';
     $value = $_POST['setting_value'] ?? '';
     
-    if ($key && isset($_POST['setting_value'])) {
+    $editableKeys = [
+        'attendance_multi_check_enabled', 'attendance_default_total_checks',
+        'attendance_check_window_minutes', 'attendance_hide_timing_from_students',
+        'face_confidence_threshold', 'liveness_detection_enabled', 'gps_proximity_radius',
+    ];
+    
+    if ($key && isset($_POST['setting_value']) && in_array($key, $editableKeys)) {
         try {
             // Get setting metadata
             $checkQuery = "SELECT `type`, `validation_rule` FROM system_settings WHERE `key` = :key LIMIT 1";
@@ -92,32 +98,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
     }
 }
 
+// Only show these settings in the admin panel
+$allowedSettings = [
+    'attendance_multi_check_enabled',
+    'attendance_default_total_checks',
+    'attendance_check_window_minutes',
+    'attendance_hide_timing_from_students',
+    'face_confidence_threshold',
+    'liveness_detection_enabled',
+    'gps_proximity_radius',
+];
+
+// Labels and descriptions for each setting
+$settingLabels = [
+    'attendance_multi_check_enabled'       => ['label' => 'Multi-Check Attendance',        'desc' => 'Require multiple check-ins during a class for attendance to count'],
+    'attendance_default_total_checks'      => ['label' => 'Checks Per Class',              'desc' => 'Number of check-ins required per class session'],
+    'attendance_check_window_minutes'      => ['label' => 'Response Window (min)',          'desc' => 'Minutes a student has to respond to each check'],
+    'attendance_hide_timing_from_students' => ['label' => 'Hide Check Timing',             'desc' => 'Students won\'t see when the next check is coming'],
+    'face_confidence_threshold'            => ['label' => 'Face Match Threshold (%)',       'desc' => 'Minimum face recognition confidence to accept (0-100)'],
+    'liveness_detection_enabled'           => ['label' => 'Liveness Detection',            'desc' => 'Require blink/head turn to prevent photo bypass'],
+    'gps_proximity_radius'                 => ['label' => 'GPS Radius (meters)',            'desc' => 'Maximum distance from teacher for valid check-in'],
+];
+
 if ($db) {
     try {
-        // Fetch all settings
-        $stmt = $db->query("SELECT `key`, `value`, `type`, `description`, `category`, `validation_rule` FROM system_settings ORDER BY `category`, `key`");
+        $placeholders = implode(',', array_fill(0, count($allowedSettings), '?'));
+        $stmt = $db->prepare("SELECT `key`, `value`, `type`, `description`, `category`, `validation_rule` FROM system_settings WHERE `key` IN ($placeholders) ORDER BY `key`");
+        $stmt->execute($allowedSettings);
         $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Group settings by category
-        $settingsByCategory = [];
-        foreach ($allSettings as $setting) {
-            $category = $setting['category'] ?? 'General';
-            if (!isset($settingsByCategory[$category])) {
-                $settingsByCategory[$category] = [];
+        // Add any missing settings with defaults
+        $foundKeys = array_column($allSettings, 'key');
+        $defaults = [
+            'attendance_multi_check_enabled'       => ['value' => 'true',  'type' => 'boolean'],
+            'attendance_default_total_checks'      => ['value' => '2',     'type' => 'integer'],
+            'attendance_check_window_minutes'      => ['value' => '3',     'type' => 'integer'],
+            'attendance_hide_timing_from_students'  => ['value' => 'true', 'type' => 'boolean'],
+            'face_confidence_threshold'            => ['value' => '75',    'type' => 'integer'],
+            'liveness_detection_enabled'           => ['value' => 'true',  'type' => 'boolean'],
+            'gps_proximity_radius'                 => ['value' => '50',    'type' => 'integer'],
+        ];
+        foreach ($allowedSettings as $key) {
+            if (!in_array($key, $foundKeys) && isset($defaults[$key])) {
+                $allSettings[] = [
+                    'key' => $key,
+                    'value' => $defaults[$key]['value'],
+                    'type' => $defaults[$key]['type'],
+                    'description' => $settingLabels[$key]['desc'] ?? '',
+                    'category' => 'Attendance',
+                    'validation_rule' => null
+                ];
             }
-            $settingsByCategory[$category][] = $setting;
         }
         
-        // Also keep the old array format for backward compatibility
+        // Sort to match allowedSettings order
+        usort($allSettings, function($a, $b) use ($allowedSettings) {
+            return array_search($a['key'], $allowedSettings) - array_search($b['key'], $allowedSettings);
+        });
+
         foreach ($allSettings as $setting) {
             $value = $setting['value'];
-            if ($setting['type'] === 'integer') {
-                $value = intval($value);
-            } elseif ($setting['type'] === 'float') {
-                $value = floatval($value);
-            } elseif ($setting['type'] === 'boolean') {
-                $value = ($value === '1' || strtolower($value) === 'true');
-            }
+            if ($setting['type'] === 'integer') $value = intval($value);
+            elseif ($setting['type'] === 'boolean') $value = ($value === '1' || strtolower($value) === 'true');
             $settingsArray[$setting['key']] = $value;
         }
     } catch (Exception $e) {
@@ -127,29 +169,17 @@ if ($db) {
 
 $pageTitle = 'Settings';
 
-// Helper function to get setting icon
-function getSettingIcon($category) {
+function getSettingIcon($key) {
     $icons = [
-        'Attendance' => 'calendar-check',
-        'Face Recognition' => 'eye',
-        'System' => 'gear',
-        'Security' => 'shield-lock',
-        'General' => 'sliders'
+        'attendance_multi_check_enabled'       => 'check2-all',
+        'attendance_default_total_checks'      => 'hash',
+        'attendance_check_window_minutes'      => 'clock',
+        'attendance_hide_timing_from_students' => 'eye-slash',
+        'face_confidence_threshold'            => 'percent',
+        'liveness_detection_enabled'           => 'person-bounding-box',
+        'gps_proximity_radius'                 => 'geo-alt',
     ];
-    return $icons[$category] ?? 'gear';
-}
-
-// Helper function to get setting description
-function getSettingDescription($key) {
-    $descriptions = [
-        'min_attendance_threshold' => 'Students will receive warnings if their attendance falls below this percentage',
-        'gps_proximity_radius' => 'Maximum distance (in meters) a student can be from the teacher to mark attendance',
-        'face_confidence_threshold' => 'Minimum confidence level (0-100%) for face recognition to accept a match',
-        'enable_liveness_detection' => 'Enable anti-spoofing: prevents using photos or videos to bypass face recognition',
-        'academic_year' => 'Current academic year for the institution',
-        'semester_duration_weeks' => 'Duration of each semester in weeks'
-    ];
-    return $descriptions[$key] ?? '';
+    return $icons[$key] ?? 'gear';
 }
 ?>
 <!DOCTYPE html>
@@ -192,38 +222,6 @@ function getSettingDescription($key) {
         .page-header p {
             color: #718096;
             font-size: 15px;
-        }
-        
-        .category-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .category-tab {
-            padding: 10px 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            font-weight: 600;
-            color: #4a5568;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .category-tab:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .category-tab.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
         }
         
         .settings-grid {
@@ -275,18 +273,6 @@ function getSettingDescription($key) {
             font-weight: 700;
             color: #2d3748;
             margin: 0;
-        }
-        
-        .setting-type {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-top: 4px;
-            background: #edf2f7;
-            color: #4a5568;
         }
         
         .setting-description {
@@ -380,56 +366,6 @@ function getSettingDescription($key) {
             transform: translateY(0);
         }
         
-        .setting-validation {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 8px;
-            display: block;
-        }
-        
-        .range-slider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .range-slider input[type="range"] {
-            flex: 1;
-            height: 6px;
-            border-radius: 3px;
-            background: #cbd5e0;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .range-slider input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-        }
-        
-        .range-slider input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-        }
-        
-        .range-value {
-            min-width: 45px;
-            text-align: right;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
         .alert {
             border-radius: 8px;
             border: none;
@@ -473,8 +409,8 @@ function getSettingDescription($key) {
         <!-- Page Content -->
         <div class="content-wrapper">
             <div class="page-header">
-                <h2><i class="bi bi-gear"></i> System Settings</h2>
-                <p>Configure application behavior and parameters</p>
+                <h2><i class="bi bi-gear"></i> Attendance Settings</h2>
+                <p>Configure attendance checks, face verification, and GPS</p>
             </div>
             
             <?php if ($successMessage): ?>
@@ -491,72 +427,41 @@ function getSettingDescription($key) {
                 </div>
             <?php endif; ?>
             
-            <!-- Category Tabs -->
-            <div class="category-tabs">
-                <div class="category-tab active" data-category="all">
-                    <i class="bi bi-kanban"></i> All Settings
-                </div>
-                <?php 
-                foreach ($settingsByCategory as $category => $settings) {
-                    $icon = getSettingIcon($category);
-                    echo '<div class="category-tab" data-category="' . htmlspecialchars(strtolower(str_replace(' ', '-', $category))) . '">';
-                    echo '<i class="bi bi-' . $icon . '"></i> ' . htmlspecialchars($category);
-                    echo '</div>';
-                }
-                ?>
-            </div>
-            
             <!-- Settings Grid -->
             <div class="settings-grid" id="settingsGrid">
                 <?php
-                if (empty($settingsByCategory)): ?>
+                if (empty($allSettings)): ?>
                     <div style="padding: 40px; text-align: center; grid-column: 1 / -1;">
                         <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #cbd5e0; margin-bottom: 20px; display: block;"></i>
                         <h3 style="color: #718096;">No Settings Found</h3>
                         <p style="color: #a0aec0;">Please check your database connection.</p>
                     </div>
                 <?php else:
-                foreach ($settingsByCategory as $category => $settings):
-                    $categoryId = strtolower(str_replace(' ', '-', $category));
-                    foreach ($settings as $setting):
-                        $value = $setting['value'];
-                        // Cast for display
-                        if ($setting['type'] === 'integer') {
-                            $value = intval($value);
-                        } elseif ($setting['type'] === 'float') {
-                            $value = floatval($value);
-                        } elseif ($setting['type'] === 'boolean') {
-                            $value = ($value === '1' || strtolower($value) === 'true');
-                        }
-                        
-                        $icon = getSettingIcon($category);
-                        $iconColor = match($setting['type']) {
-                            'boolean' => 'var(--success)',
-                            'integer' => 'var(--info)',
-                            'float' => 'var(--warning)',
-                            default => 'var(--primary)'
-                        };
-                        $bgColor = match($setting['type']) {
-                            'boolean' => 'rgba(72, 187, 120, 0.1)',
-                            'integer' => 'rgba(66, 153, 225, 0.1)',
-                            'float' => 'rgba(246, 173, 85, 0.1)',
-                            default => 'rgba(102, 126, 234, 0.1)'
-                        };
+                foreach ($allSettings as $setting):
+                    $value = $setting['value'];
+                    if ($setting['type'] === 'integer') {
+                        $value = intval($value);
+                    } elseif ($setting['type'] === 'boolean') {
+                        $value = ($value === '1' || strtolower($value) === 'true');
+                    }
+                    
+                    $icon = getSettingIcon($setting['key']);
+                    $label = $settingLabels[$setting['key']]['label'] ?? $setting['key'];
+                    $desc  = $settingLabels[$setting['key']]['desc']  ?? ($setting['description'] ?? '');
+                    $iconColor = $setting['type'] === 'boolean' ? 'var(--success)' : 'var(--info)';
+                    $bgColor   = $setting['type'] === 'boolean' ? 'rgba(72, 187, 120, 0.1)' : 'rgba(66, 153, 225, 0.1)';
                 ?>
-                <div class="setting-card" data-category="<?php echo $categoryId; ?>">
+                <div class="setting-card">
                     <div class="setting-header">
                         <div class="setting-icon" style="background: <?php echo $bgColor; ?>; color: <?php echo $iconColor; ?>;">
                             <i class="bi bi-<?php echo $icon; ?>"></i>
                         </div>
                         <div class="setting-header-text">
-                            <h3 class="setting-name"><?php echo htmlspecialchars($setting['key']); ?></h3>
-                            <span class="setting-type"><?php echo htmlspecialchars($setting['type']); ?></span>
+                            <h3 class="setting-name"><?php echo htmlspecialchars($label); ?></h3>
                         </div>
                     </div>
                     
-                    <p class="setting-description">
-                        <?php echo htmlspecialchars(getSettingDescription($setting['key']) ?: ($setting['description'] ?? 'No description')); ?>
-                    </p>
+                    <p class="setting-description"><?php echo htmlspecialchars($desc); ?></p>
                     
                     <div class="setting-value-group">
                         <span class="setting-value-label">Current Value</span>
@@ -577,34 +482,19 @@ function getSettingDescription($key) {
                         
                         <?php if ($setting['type'] === 'boolean'): ?>
                             <select name="setting_value" class="form-select form-select-sm" required style="flex: 1;">
-                                <option value="1" <?php echo ($value === true || $value === 1) ? 'selected' : ''; ?>>
-                                    <i class="bi bi-check-circle"></i> Enabled
-                                </option>
-                                <option value="0" <?php echo ($value === false || $value === 0) ? 'selected' : ''; ?>>
-                                    <i class="bi bi-x-circle"></i> Disabled
-                                </option>
+                                <option value="1" <?php echo ($value === true || $value === 1) ? 'selected' : ''; ?>>Enabled</option>
+                                <option value="0" <?php echo ($value === false || $value === 0) ? 'selected' : ''; ?>>Disabled</option>
                             </select>
-                        <?php elseif ($setting['type'] === 'integer'): ?>
-                            <input type="number" name="setting_value" value="<?php echo $value; ?>" step="1" required>
-                        <?php elseif ($setting['type'] === 'float'): ?>
-                            <input type="number" name="setting_value" value="<?php echo $value; ?>" step="0.01" required>
                         <?php else: ?>
-                            <input type="text" name="setting_value" value="<?php echo htmlspecialchars($value); ?>" required>
+                            <input type="number" name="setting_value" value="<?php echo $value; ?>" step="1" min="1" required>
                         <?php endif; ?>
                         
                         <button type="submit" class="btn-update">
                             <i class="bi bi-save"></i> Save
                         </button>
                     </form>
-                    
-                    <?php if ($setting['validation_rule']): ?>
-                        <span class="setting-validation">
-                            <i class="bi bi-info-circle"></i> Constraints: <?php echo htmlspecialchars($setting['validation_rule']); ?>
-                        </span>
-                    <?php endif; ?>
                 </div>
                 <?php
-                    endforeach;
                 endforeach;
                 endif;
                 ?>
@@ -615,34 +505,8 @@ function getSettingDescription($key) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
     <script>
-        // Category tab filtering
-        document.querySelectorAll('.category-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const selectedCategory = this.getAttribute('data-category');
-                const allTabs = document.querySelectorAll('.category-tab');
-                const allCards = document.querySelectorAll('.setting-card');
-                
-                // Update active tab
-                allTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Filter cards
-                allCards.forEach(card => {
-                    if (selectedCategory === 'all') {
-                        card.style.display = '';
-                    } else {
-                        const cardCategory = card.getAttribute('data-category');
-                        card.style.display = cardCategory === selectedCategory ? '' : 'none';
-                    }
-                });
-            });
-        });
-        
-        // Auto-dismiss alerts after 5 seconds
         document.querySelectorAll('.alert').forEach(alert => {
-            setTimeout(() => {
-                alert.classList.remove('show');
-            }, 5000);
+            setTimeout(() => { alert.classList.remove('show'); }, 5000);
         });
     </script>
     <!-- Alert Container for Toast Notifications -->
