@@ -13,7 +13,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../config/firebase.php';
+require_once __DIR__ . '/../../../config/firebase.php';
 require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
@@ -225,7 +225,8 @@ try {
     $tokenResult = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($tokenResult && !empty($tokenResult['token'])) {
-        $firebaseConfig = new FirebaseConfig();
+        $firebaseConfigClass = 'FirebaseConfig';
+        $firebaseConfig = new $firebaseConfigClass();
 
         $fcmData = [
             'notification_id' => (string)$notificationId,
@@ -267,7 +268,15 @@ try {
             500
         );
     } else {
-        Response::error('No active FCM token found for user', 404);
+        Response::success([
+            'notification_id' => $notificationId,
+            'target_user' => $targetUser['full_name'],
+            'title' => $title,
+            'message' => $message,
+            'notification_class' => $notifClass,
+            'personalization_data' => $personalizationData,
+            'delivery_status' => 'stored_only'
+        ], 'Notification saved, but no active FCM token was found for the target user');
     }
     
 } catch (Exception $e) {

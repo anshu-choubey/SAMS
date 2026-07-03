@@ -111,15 +111,19 @@ class Auth {
     /**
      * Check if user has specific role
      */
-    public static function hasRole($role) {
+    public static function hasRole(...$roles) {
         $user = self::user();
         
         if (!$user) {
             Response::unauthorized('Please login to continue');
         }
         
-        if ($user['role'] !== $role) {
-            Response::forbidden("Access restricted to {$role} only");
+        if (count($roles) === 0) {
+            Response::error('Role check requires at least one role', 500);
+        }
+
+        if (!in_array($user['role'], $roles, true)) {
+            Response::forbidden('Access restricted to ' . implode(' or ', $roles) . ' only');
         }
 
         return true;
