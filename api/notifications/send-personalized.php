@@ -280,6 +280,8 @@ try {
     }
     
 } catch (Exception $e) {
+    error_log('Send personalized notification failed: ' . $e->getMessage());
+    error_log($e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
         'success' => false,
