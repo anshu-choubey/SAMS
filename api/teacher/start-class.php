@@ -144,16 +144,25 @@ try {
     // Step 2: Apply system-wide settings
     try {
         $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
+            'attendance_multi_check_enabled',
+            'attendance_default_total_checks',
             'attendance_random_intervals_enabled',
             'attendance_min_interval_minutes', 
             'attendance_max_interval_minutes',
             'attendance_hide_timing_from_students',
             'attendance_auto_trigger_enabled',
-            'attendance_response_window_minutes'
+            'attendance_response_window_minutes',
+            'attendance_check_window_minutes'
         )";
         $stmt = $db->query($settingsQuery);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             switch ($row['key']) {
+                case 'attendance_multi_check_enabled':
+                    $multiCheckEnabled = $row['value'] === 'true' || $row['value'] === '1';
+                    break;
+                case 'attendance_default_total_checks':
+                    $totalChecksPlanned = (int)$row['value'];
+                    break;
                 case 'attendance_random_intervals_enabled':
                     $randomIntervalsEnabled = $row['value'] === 'true' || $row['value'] === '1';
                     break;
@@ -170,6 +179,9 @@ try {
                     $autoTriggerChecks = $row['value'] === 'true' || $row['value'] === '1';
                     break;
                 case 'attendance_response_window_minutes':
+                    $responseWindowMinutes = (int)$row['value'];
+                    break;
+                case 'attendance_check_window_minutes':
                     $responseWindowMinutes = (int)$row['value'];
                     break;
             }
