@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "73550218074",
+    "project_id": "careful-form-373115",
+    "storage_bucket": "careful-form-373115.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:73550218074:android:305d7bfea0b2414aa72963",
+        "android_client_info": {
+          "package_name": "com.sams.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCD1G6GcnOotIHRYCjn4OAC79V99tEYkDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
