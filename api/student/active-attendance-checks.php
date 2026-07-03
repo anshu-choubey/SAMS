@@ -109,12 +109,13 @@ try {
     }
 
     // Get active check points for student's classes that they haven't responded to yet
-    // Now includes hide_timing_from_students from teacher_locations
+    // Now includes hide_timing_from_students from teacher_locations AND teacher GPS coordinates
     $query = "SELECT DISTINCT
                 cp.id as check_point_id,
                 cp.check_number,
                 cp.check_time,
                 cp.window_end_time,
+                cp.schedule_id,
                 sub.name as subject_name,
                 sub.code as subject_code,
                 u.full_name as teacher_name,
@@ -123,6 +124,8 @@ try {
                 TIME_FORMAT(sc.start_time, '%H:%i:%s') as class_start_time,
                 TIME_FORMAT(sc.end_time, '%H:%i:%s') as class_end_time,
                 tl.id as session_id,
+                tl.latitude as teacher_latitude,
+                tl.longitude as teacher_longitude,
                 tl.total_checks_planned,
                 tl.checks_completed,
                 tl.hide_timing_from_students,
@@ -199,6 +202,7 @@ try {
             'check_point_id' => (int)$check['check_point_id'],
             'check_number' => (int)$check['check_number'],
             'session_id' => (int)$check['session_id'],
+            'schedule_id' => (int)($check['schedule_id'] ?? 0),
             'subject_name' => $check['subject_name'],
             'subject_code' => $check['subject_code'],
             'teacher_name' => $check['teacher_name'],
@@ -206,6 +210,8 @@ try {
             'building' => $check['building'],
             'class_start_time' => $check['class_start_time'],
             'class_end_time' => $check['class_end_time'],
+            'teacher_latitude' => (float)($check['teacher_latitude'] ?? 0),
+            'teacher_longitude' => (float)($check['teacher_longitude'] ?? 0),
             'total_checks_planned' => (int)($check['total_checks_planned'] ?? 0),
             'checks_completed' => (int)($check['checks_completed'] ?? 0),
             'is_expired' => (bool)$check['is_expired'],
