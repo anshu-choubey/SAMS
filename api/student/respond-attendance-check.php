@@ -378,30 +378,38 @@ try {
         $stmt->execute();
         
         if (!$stmt->fetch()) {
-            $markQuery = "INSERT INTO attendance 
-                          (student_id, schedule_id, assignment_id, teacher_id, department_id,
-                           attendance_date, status, face_confidence_score, 
-                           student_latitude, student_longitude,
-                           teacher_latitude, teacher_longitude, distance_meters,
-                           verification_status, marked_at)
-                          VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id,
-                                  CURDATE(), 'present', :face_confidence,
-                                  :student_lat, :student_lon,
-                                  :teacher_lat, :teacher_lon, :distance,
-                                  'success', NOW())";
-            $stmt = $db->prepare($markQuery);
-            $stmt->bindParam(':student_id', $studentData['id']);
-            $stmt->bindParam(':schedule_id', $sessionInfo['schedule_id']);
-            $stmt->bindParam(':assignment_id', $sessionInfo['assignment_id']);
-            $stmt->bindParam(':teacher_id', $sessionInfo['teacher_id']);
-            $stmt->bindParam(':department_id', $sessionInfo['department_id']);
-            $stmt->bindParam(':face_confidence', $data['face_confidence']);
-            $stmt->bindParam(':student_lat', $data['latitude']);
-            $stmt->bindParam(':student_lon', $data['longitude']);
-            $stmt->bindParam(':teacher_lat', $checkPoint['teacher_latitude']);
-            $stmt->bindParam(':teacher_lon', $checkPoint['teacher_longitude']);
-            $stmt->bindParam(':distance', $distance);
-            $stmt->execute();
+            try {
+                $markQuery = "INSERT INTO attendance 
+                              (student_id, schedule_id, assignment_id, teacher_id, department_id,
+                               attendance_date, status, face_confidence_score, 
+                               student_latitude, student_longitude,
+                               teacher_latitude, teacher_longitude, distance_meters,
+                               verification_status)
+                              VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id,
+                                      CURDATE(), 'present', :face_confidence,
+                                      :student_lat, :student_lon,
+                                      :teacher_lat, :teacher_lon, :distance,
+                                      'success')";
+                $stmt = $db->prepare($markQuery);
+                $stmt->bindParam(':student_id', $studentData['id']);
+                $stmt->bindParam(':schedule_id', $sessionInfo['schedule_id']);
+                $stmt->bindParam(':assignment_id', $sessionInfo['assignment_id']);
+                $stmt->bindParam(':teacher_id', $sessionInfo['teacher_id']);
+                $stmt->bindParam(':department_id', $sessionInfo['department_id']);
+                $stmt->bindParam(':face_confidence', $data['face_confidence']);
+                $stmt->bindParam(':student_lat', $data['latitude']);
+                $stmt->bindParam(':student_lon', $data['longitude']);
+                $stmt->bindParam(':teacher_lat', $checkPoint['teacher_latitude']);
+                $stmt->bindParam(':teacher_lon', $checkPoint['teacher_longitude']);
+                $stmt->bindParam(':distance', $distance);
+                $stmt->execute();
+                $attendanceMarked = true;
+                error_log("Auto-marked attendance for student {$studentData['id']} schedule {$sessionInfo['schedule_id']}");
+            } catch (Exception $markErr) {
+                error_log("Failed to auto-mark attendance: " . $markErr->getMessage());
+                $attendanceMarked = false;
+            }
+        } else {
             $attendanceMarked = true;
         }
     }
