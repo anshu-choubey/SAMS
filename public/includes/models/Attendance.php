@@ -49,7 +49,7 @@ class Attendance {
         $thresholdStmt = $this->conn->prepare($thresholdQuery);
         $thresholdStmt->execute();
         $thresholdResult = $thresholdStmt->fetch(PDO::FETCH_ASSOC);
-        $faceThreshold = $thresholdResult ? (float)$thresholdResult['setting_value'] : (FACE_CONFIDENCE_THRESHOLD ?? 95);
+        $faceThreshold = $thresholdResult ? (float)$thresholdResult['setting_value'] : (FACE_CONFIDENCE_THRESHOLD ?? 60);
         
         // Verify face confidence
         $faceValid = $this->face_confidence_score >= $faceThreshold;

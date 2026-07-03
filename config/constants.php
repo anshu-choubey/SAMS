@@ -20,7 +20,7 @@ define('LOCKOUT_TIME', 900); // 15 minutes
 
 // Attendance System
 define('GPS_PROXIMITY_RADIUS', 50); // meters
-define('FACE_CONFIDENCE_THRESHOLD', 75); // percentage - more realistic for face recognition
+define('FACE_CONFIDENCE_THRESHOLD', 60); // percentage - cosine similarity * 100 (0.6 = genuine match)
 define('ATTENDANCE_WARNING_THRESHOLD', 75); // percentage
 
 // File Upload

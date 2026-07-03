@@ -31,7 +31,7 @@ try {
         ['continuous_face_detection_interval', '30', 'Face detection interval in seconds'],
         ['liveness_detection_enabled', 'true', 'Enable liveness detection for face recognition'],
         ['liveness_min_score', '60', 'Minimum liveness score (0-100)'],
-        ['face_confidence_threshold', '75', 'Minimum face confidence score (0-100)']
+        ['face_confidence_threshold', '60', 'Minimum face confidence score (0-100)']
     ];
     
     $inserted = 0;

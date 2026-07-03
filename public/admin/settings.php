@@ -163,7 +163,7 @@ if ($db) {
             'attendance_default_total_checks'      => ['value' => '2',     'type' => 'integer'],
             'attendance_check_window_minutes'      => ['value' => '3',     'type' => 'integer'],
             'attendance_hide_timing_from_students'  => ['value' => 'true', 'type' => 'boolean'],
-            'face_confidence_threshold'            => ['value' => '75',    'type' => 'integer'],
+            'face_confidence_threshold'            => ['value' => '60',    'type' => 'integer'],
             'liveness_detection_enabled'           => ['value' => 'true',  'type' => 'boolean'],
             'gps_proximity_radius'                 => ['value' => '50',    'type' => 'integer'],
         ];

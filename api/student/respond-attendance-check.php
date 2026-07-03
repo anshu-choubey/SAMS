@@ -77,7 +77,7 @@ try {
     $db = $database->getConnection();
 
     // Get face confidence threshold from settings
-    $faceConfidenceThreshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', 85) ?: 85);
+    $faceConfidenceThreshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', 60) ?: 60);
     $gpsProximityRadius = (int)(getSystemSettingValue($db, 'gps_proximity_radius', 50) ?: 50);
 
     // Get POST data

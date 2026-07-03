@@ -78,7 +78,7 @@ try {
         // Face Recognition Settings
         [
             'key' => 'face_confidence_threshold',
-            'value' => '85',
+            'value' => '60',
             'type' => 'integer',
             'description' => 'Minimum ML Kit face match confidence (0-100)',
             'category' => 'Face Recognition',

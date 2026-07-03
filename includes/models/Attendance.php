@@ -45,7 +45,7 @@ class Attendance {
         $gpsValid = $this->verifyGPSProximity();
         
         // Get face threshold from database settings
-        $faceThreshold = $this->getSystemSettingValue('face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 95);
+        $faceThreshold = $this->getSystemSettingValue('face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 60);
         
         // Verify face confidence
         $faceValid = $this->face_confidence_score >= $faceThreshold;

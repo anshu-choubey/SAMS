@@ -78,7 +78,7 @@ try {
         $decryptedEmbedding = $studentModel->getFaceData($studentData['id']);
         
         // Get threshold from database settings
-        $threshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 95) ?: (FACE_CONFIDENCE_THRESHOLD ?? 95));
+        $threshold = (int)(getSystemSettingValue($db, 'face_confidence_threshold', FACE_CONFIDENCE_THRESHOLD ?? 60) ?: (FACE_CONFIDENCE_THRESHOLD ?? 60));
         
         Response::success([
             'face_embedding' => $decryptedEmbedding,
