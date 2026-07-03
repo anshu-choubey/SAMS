@@ -128,21 +128,130 @@ try {
         Response::error('Session already ended', 400);
     }
 
+    // Check if multi-check mode is enabled
+    $multiCheckEnabled = (bool)$session['multi_check_enabled'];
+    
+    if ($multiCheckEnabled) {
+        // For multi-check mode, finalize attendance based on check responses
+        $today = date('Y-m-d');
+        
+        // Get all students in this class
+        $studentsQuery = "SELECT s.id FROM students s
+                          WHERE s.department_id = :department_id AND s.semester = :semester";
+        if (!empty($session['section'])) {
+            $studentsQuery .= " AND s.section = :section";
+        }
+        
+        $stmt = $db->prepare($studentsQuery);
+        $stmt->bindParam(':department_id', $session['department_id']);
+        $stmt->bindParam(':semester', $session['semester']);
+        if (!empty($session['section'])) {
+            $stmt->bindParam(':section', $session['section']);
+        }
+        $stmt->execute();
+        $allStudents = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $totalChecks = (int)$session['total_checks_planned'];
+        $requiredSuccessfulChecks = max(1, floor($totalChecks * 0.6)); // 60% threshold
+        
+        $absentMarked = 0;
+
+        // Process each student
+        foreach ($allStudents as $studentId) {
+            // Check if already has final attendance record
+            $existingQuery = "SELECT id FROM attendance 
+                              WHERE student_id = :student_id AND schedule_id = :schedule_id 
+                              AND attendance_date = :date";
+            $stmt = $db->prepare($existingQuery);
+            $stmt->bindParam(':student_id', $studentId);
+            $stmt->bindParam(':schedule_id', $session['schedule_id']);
+            $stmt->bindParam(':date', $today);
+            $stmt->execute();
+            
+            if ($stmt->fetch()) {
+                continue; // Already finalized
+            }
+
+            // Get student's check responses
+            $responsesQuery = "SELECT 
+                                COUNT(*) as total_responses,
+                                SUM(CASE WHEN verification_status = 'success' THEN 1 ELSE 0 END) as successful_checks
+                               FROM attendance_check_responses
+                               WHERE session_id = :session_id AND student_id = :student_id";
+            $stmt = $db->prepare($responsesQuery);
+            $stmt->bindParam(':session_id', $data['session_id']);
+            $stmt->bindParam(':student_id', $studentId);
+            $stmt->execute();
+            $studentStats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $successfulChecks = (int)$studentStats['successful_checks'];
+
+            // Mark absent if didn't meet threshold
+            if ($successfulChecks < $requiredSuccessfulChecks) {
+                $insertAbsent = "INSERT INTO attendance 
+                                 (student_id, schedule_id, assignment_id, teacher_id, department_id, session_id,
+                                  attendance_date, total_checks_required, successful_checks,
+                                  teacher_latitude, teacher_longitude, verification_status, status)
+                                 VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id, :session_id,
+                                         :date, :total_checks, :successful_checks,
+                                         :teacher_lat, :teacher_lon, 'success', 'absent')";
+                $stmt = $db->prepare($insertAbsent);
+                $stmt->bindParam(':student_id', $studentId);
+                $stmt->bindParam(':schedule_id', $session['schedule_id']);
+                $stmt->bindParam(':assignment_id', $session['assignment_id']);
+                $stmt->bindParam(':teacher_id', $teacher['id']);
+                $stmt->bindParam(':department_id', $session['department_id']);
+                $stmt->bindParam(':session_id', $data['session_id']);
+                $stmt->bindParam(':date', $today);
+                $stmt->bindParam(':total_checks', $totalChecks);
+                $stmt->bindParam(':successful_checks', $successfulChecks);
+                $stmt->bindParam(':teacher_lat', $session['latitude']);
+                $stmt->bindParam(':teacher_lon', $session['longitude']);
+                $stmt->execute();
+                $absentMarked++;
+            } else {
+                // Mark present - met threshold
+                $insertPresent = "INSERT INTO attendance 
+                                  (student_id, schedule_id, assignment_id, teacher_id, department_id, session_id,
+                                   attendance_date, total_checks_required, successful_checks,
+                                   teacher_latitude, teacher_longitude, verification_status, status)
+                                  VALUES (:student_id, :schedule_id, :assignment_id, :teacher_id, :department_id, :session_id,
+                                          :date, :total_checks, :successful_checks,
+                                          :teacher_lat, :teacher_lon, 'success', 'present')";
+                $stmt = $db->prepare($insertPresent);
+                $stmt->bindParam(':student_id', $studentId);
+                $stmt->bindParam(':schedule_id', $session['schedule_id']);
+                $stmt->bindParam(':assignment_id', $session['assignment_id']);
+                $stmt->bindParam(':teacher_id', $teacher['id']);
+                $stmt->bindParam(':department_id', $session['department_id']);
+                $stmt->bindParam(':session_id', $data['session_id']);
+                $stmt->bindParam(':date', $today);
+                $stmt->bindParam(':total_checks', $totalChecks);
+                $stmt->bindParam(':successful_checks', $successfulChecks);
+                $stmt->bindParam(':teacher_lat', $session['latitude']);
+                $stmt->bindParam(':teacher_lon', $session['longitude']);
+                $stmt->execute();
+            }
+        }
+        
+        $absentResult = ['absent_marked' => $absentMarked, 'message' => "Auto-marked $absentMarked students as absent"];
+    } else {
+        // Original single-check mode
+        $attendanceModel = new Attendance($db);
+        $absentResult = $attendanceModel->markAbsentForEndedClass(
+            $session['schedule_id'],
+            $teacher['id'],
+            $session['department_id'],
+            $session['semester'],
+            $session['section']
+        );
+    }
+    
     // End the session
     $updateQuery = "UPDATE teacher_locations SET is_active = FALSE, session_end = NOW() WHERE id = :session_id";
     $stmt = $db->prepare($updateQuery);
     $stmt->bindParam(':session_id', $data['session_id']);
     $stmt->execute();
-
-    // Auto-mark absent students who haven't marked attendance
-    $attendanceModel = new Attendance($db);
-    $absentResult = $attendanceModel->markAbsentForEndedClass(
-        $session['schedule_id'],
-        $teacher['id'],
-        $session['department_id'],
-        $session['semester'],
-        $session['section']
-    );
 
     // Get attendance summary
     $today = date('Y-m-d');

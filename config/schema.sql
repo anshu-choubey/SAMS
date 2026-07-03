@@ -202,6 +202,9 @@ CREATE TABLE teacher_locations (
     session_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     session_end TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    multi_check_enabled BOOLEAN DEFAULT FALSE,
+    total_checks_planned INT DEFAULT 1,
+    checks_completed INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
     FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
@@ -215,6 +218,57 @@ CREATE TABLE teacher_locations (
 -- =====================================================
 -- 10. Attendance Table
 -- =====================================================
+-- =====================================================
+-- Attendance Check Points Table (for random multi-check system)
+-- =====================================================
+CREATE TABLE attendance_check_points (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id INT NOT NULL,
+    schedule_id INT NOT NULL,
+    check_number INT NOT NULL,
+    check_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    window_end_time TIMESTAMP NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES teacher_locations(id) ON DELETE CASCADE,
+    FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
+    INDEX idx_session (session_id),
+    INDEX idx_active (is_active),
+    INDEX idx_check_time (check_time, window_end_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- Attendance Check Responses Table (student responses to each check point)
+-- =====================================================
+CREATE TABLE attendance_check_responses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    check_point_id INT NOT NULL,
+    student_id INT NOT NULL,
+    schedule_id INT NOT NULL,
+    session_id INT NOT NULL,
+    response_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    student_latitude DECIMAL(10, 8),
+    student_longitude DECIMAL(11, 8),
+    teacher_latitude DECIMAL(10, 8),
+    teacher_longitude DECIMAL(11, 8),
+    distance_meters DECIMAL(8, 2),
+    face_confidence_score DECIMAL(5, 2),
+    verification_status ENUM('success', 'gps_failed', 'face_failed', 'both_failed', 'late') NOT NULL,
+    device_info VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (check_point_id) REFERENCES attendance_check_points(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES teacher_locations(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_response (check_point_id, student_id),
+    INDEX idx_student (student_id),
+    INDEX idx_check_point (check_point_id),
+    INDEX idx_verification (verification_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- Main Attendance Table (final attendance record after all checks)
+-- =====================================================
 CREATE TABLE attendance (
     id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT NOT NULL,
@@ -222,16 +276,19 @@ CREATE TABLE attendance (
     assignment_id INT NOT NULL,
     teacher_id INT NOT NULL,
     department_id INT NOT NULL,
+    session_id INT,
     attendance_date DATE NOT NULL,
     attendance_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total_checks_required INT DEFAULT 1,
+    successful_checks INT DEFAULT 0,
     student_latitude DECIMAL(10, 8),
     student_longitude DECIMAL(11, 8),
     teacher_latitude DECIMAL(10, 8),
     teacher_longitude DECIMAL(11, 8),
     distance_meters DECIMAL(8, 2),
     face_confidence_score DECIMAL(5, 2),
-    verification_status ENUM('success', 'gps_failed', 'face_failed', 'both_failed') NOT NULL,
-    status ENUM('present', 'absent', 'late') DEFAULT 'present',
+    verification_status ENUM('success', 'gps_failed', 'face_failed', 'both_failed', 'partial') NOT NULL,
+    status ENUM('present', 'absent', 'late', 'partial') DEFAULT 'present',
     device_info VARCHAR(255),
     remarks TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -240,13 +297,15 @@ CREATE TABLE attendance (
     FOREIGN KEY (assignment_id) REFERENCES teacher_assignments(id) ON DELETE CASCADE,
     FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES teacher_locations(id) ON DELETE SET NULL,
     UNIQUE KEY unique_attendance (student_id, schedule_id, attendance_date),
     INDEX idx_student (student_id),
     INDEX idx_date (attendance_date),
     INDEX idx_department (department_id),
     INDEX idx_verification (verification_status),
     INDEX idx_status (status),
-    INDEX idx_student_date (student_id, attendance_date)
+    INDEX idx_student_date (student_id, attendance_date),
+    INDEX idx_session (session_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================

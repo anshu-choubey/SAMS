@@ -122,11 +122,17 @@ try {
     // Get duration (default 60 minutes)
     $durationMinutes = isset($data['duration_minutes']) ? (int)$data['duration_minutes'] : 60;
     $notes = $data['notes'] ?? null;
+    
+    // Multi-check configuration (default: enabled with 2-3 random checks)
+    $multiCheckEnabled = isset($data['multi_check_enabled']) ? (bool)$data['multi_check_enabled'] : true;
+    $totalChecksPlanned = isset($data['total_checks']) ? (int)$data['total_checks'] : rand(2, 3);
 
     // Start class session - insert into teacher_locations
     $insertQuery = "INSERT INTO teacher_locations 
-                    (teacher_id, schedule_id, assignment_id, department_id, latitude, longitude, is_active, session_start)
-                    VALUES (:teacher_id, :schedule_id, :assignment_id, :department_id, :latitude, :longitude, TRUE, NOW())";
+                    (teacher_id, schedule_id, assignment_id, department_id, latitude, longitude, 
+                     is_active, session_start, multi_check_enabled, total_checks_planned)
+                    VALUES (:teacher_id, :schedule_id, :assignment_id, :department_id, :latitude, :longitude, 
+                            TRUE, NOW(), :multi_check, :total_checks)";
     $stmt = $db->prepare($insertQuery);
     $stmt->bindParam(':teacher_id', $teacher['id']);
     $stmt->bindParam(':schedule_id', $data['schedule_id']);
@@ -134,6 +140,8 @@ try {
     $stmt->bindParam(':department_id', $schedule['department_id']);
     $stmt->bindParam(':latitude', $data['latitude']);
     $stmt->bindParam(':longitude', $data['longitude']);
+    $stmt->bindParam(':multi_check', $multiCheckEnabled, PDO::PARAM_BOOL);
+    $stmt->bindParam(':total_checks', $totalChecksPlanned);
     $stmt->execute();
 
     $sessionId = $db->lastInsertId();
@@ -157,8 +165,10 @@ try {
         'started_at' => $startedAt,
         'expected_end' => $expectedEnd,
         'qr_code' => $qrCode,
-        'attendance_window_minutes' => $durationMinutes
-    ], 'Class session started successfully');
+        'attendance_window_minutes' => $durationMinutes,
+        'multi_check_enabled' => $multiCheckEnabled,
+        'total_checks_planned' => $totalChecksPlanned
+    ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance enabled ({$totalChecksPlanned} random checks planned)." : 'Single attendance check.'));
 
 } catch (Exception $e) {
     http_response_code(500);
