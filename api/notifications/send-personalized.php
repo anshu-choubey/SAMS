@@ -14,7 +14,7 @@ header('Content-Type: application/json');
 try {
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../config/constants.php';
-    require_once __DIR__ . '/../../../config/firebase.php';
+    require_once __DIR__ . '/../../../config/firebase-impl.php';
     require_once __DIR__ . '/../../includes/middleware/CORS.php';
     require_once __DIR__ . '/../../includes/middleware/Auth.php';
     require_once __DIR__ . '/../../includes/helpers/Response.php';
