@@ -279,7 +279,7 @@ try {
         ], 'Notification saved, but no active FCM token was found for the target user');
     }
     
-} catch (Exception $e) {
+} catch (Throwable $e) {
     error_log('Send personalized notification failed: ' . $e->getMessage());
     error_log($e->getTraceAsString());
     http_response_code(500);
