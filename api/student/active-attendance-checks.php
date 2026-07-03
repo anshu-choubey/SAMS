@@ -39,6 +39,22 @@ try {
     $database = new Database();
     $db = $database->getConnection();
     
+    // Check if multi-check system is enabled
+    $multiCheckSetting = "SELECT value FROM system_settings WHERE `key` = 'attendance_multi_check_enabled' LIMIT 1";
+    $stmt = $db->query($multiCheckSetting);
+    $settingRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    $multiCheckEnabled = !$settingRow || $settingRow['value'] === 'true' || $settingRow['value'] === '1';
+    
+    if (!$multiCheckEnabled) {
+        Response::success([
+            'active_checks' => [],
+            'total_pending' => 0,
+            'active_sessions' => [],
+            'stay_on_screen' => false,
+            'has_random_intervals' => false
+        ], 'Multi-check attendance is disabled');
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // LAZY ACTIVATION: Trigger any due scheduled checks
     // This replaces the need for a cron job
