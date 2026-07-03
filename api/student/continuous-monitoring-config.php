@@ -58,8 +58,8 @@ try {
     }
     
     // Get system settings
-    $settingsQuery = "SELECT setting_key, setting_value FROM system_settings 
-                      WHERE setting_key IN (
+    $settingsQuery = "SELECT `key`, value FROM system_settings 
+                      WHERE `key` IN (
                           'continuous_monitoring_enabled',
                           'continuous_monitoring_required',
                           'continuous_auto_response_enabled',
@@ -72,7 +72,7 @@ try {
     $stmt = $db->query($settingsQuery);
     $settings = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $settings[$row['setting_key']] = $row['setting_value'];
+        $settings[$row['key']] = $row['value'];
     }
     
     // Calculate expected end time

@@ -41,18 +41,18 @@ try {
         list($key, $value, $description) = $setting;
         
         // Check if exists
-        $stmt = $pdo->prepare("SELECT id FROM system_settings WHERE setting_key = ?");
+        $stmt = $pdo->prepare("SELECT id FROM system_settings WHERE `key` = ?");
         $stmt->execute([$key]);
         
         if ($stmt->fetch()) {
             // Update
-            $stmt = $pdo->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
+            $stmt = $pdo->prepare("UPDATE system_settings SET value = ? WHERE `key` = ?");
             $stmt->execute([$value, $key]);
             echo "✅ Updated: $key = $value\n";
             $updated++;
         } else {
             // Insert
-            $stmt = $pdo->prepare("INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO system_settings (`key`, value) VALUES (?, ?)");
             $stmt->execute([$key, $value]);
             echo "✅ Inserted: $key = $value\n";
             $inserted++;

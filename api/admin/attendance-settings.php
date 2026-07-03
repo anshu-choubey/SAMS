@@ -35,13 +35,13 @@ try {
         // Get current settings
         $settings = [];
         
-        $query = "SELECT setting_key, setting_value FROM system_settings 
-                  WHERE setting_key LIKE 'attendance_%' OR setting_key LIKE 'continuous_%'
-                  ORDER BY setting_key";
+        $query = "SELECT `key`, value FROM system_settings 
+                  WHERE `key` LIKE 'attendance_%' OR `key` LIKE 'continuous_%'
+                  ORDER BY `key`";
         $stmt = $db->query($query);
         
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $settings[$row['setting_key']] = $row['setting_value'];
+            $settings[$row['key']] = $row['value'];
         }
         
         // Default values if not set
@@ -104,21 +104,21 @@ try {
             }
             
             // Check if setting exists
-            $checkQuery = "SELECT id FROM system_settings WHERE setting_key = :key";
+            $checkQuery = "SELECT id FROM system_settings WHERE `key` = :key";
             $stmt = $db->prepare($checkQuery);
             $stmt->bindParam(':key', $key);
             $stmt->execute();
             
             if ($stmt->fetch()) {
                 // Update existing
-                $updateQuery = "UPDATE system_settings SET setting_value = :value WHERE setting_key = :key";
+                $updateQuery = "UPDATE system_settings SET value = :value WHERE `key` = :key";
                 $stmt = $db->prepare($updateQuery);
                 $stmt->bindParam(':value', $value);
                 $stmt->bindParam(':key', $key);
                 $stmt->execute();
             } else {
                 // Insert new
-                $insertQuery = "INSERT INTO system_settings (setting_key, setting_value) VALUES (:key, :value)";
+                $insertQuery = "INSERT INTO system_settings (`key`, value) VALUES (:key, :value)";
                 $stmt = $db->prepare($insertQuery);
                 $stmt->bindParam(':key', $key);
                 $stmt->bindParam(':value', $value);
