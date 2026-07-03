@@ -47,18 +47,21 @@ try {
             $settings[$row['key']] = $row['value'];
         }
         
-        // Default values - SIMPLIFIED (removed unused continuous_* settings)
         $defaults = [
             // Multi-check attendance settings
             'attendance_multi_check_enabled' => 'true',
             'attendance_default_total_checks' => '3',
+            'attendance_random_intervals_enabled' => 'true',
             'attendance_min_check_interval' => '10',
             'attendance_max_check_interval' => '25',
+            'attendance_first_check_delay' => '10',
             'attendance_check_window_minutes' => '3',
             'attendance_hide_timing_from_students' => 'true',
             'attendance_auto_trigger_enabled' => 'true',
+            'attendance_auto_schedule_enabled' => 'true',
+            'attendance_response_window_minutes' => '3',
             
-            // Face verification settings (security-critical)
+            // Face verification settings
             'liveness_detection_enabled' => 'true',
             'face_confidence_threshold' => '75',
             
@@ -82,16 +85,19 @@ try {
             Response::error('No settings provided', 400);
         }
         
-        // Valid setting keys - SIMPLIFIED
         $validKeys = [
             // Multi-check attendance
             'attendance_multi_check_enabled',
             'attendance_default_total_checks',
+            'attendance_random_intervals_enabled',
             'attendance_min_check_interval',
             'attendance_max_check_interval',
+            'attendance_first_check_delay',
             'attendance_check_window_minutes',
             'attendance_hide_timing_from_students',
             'attendance_auto_trigger_enabled',
+            'attendance_auto_schedule_enabled',
+            'attendance_response_window_minutes',
             
             // Face verification
             'liveness_detection_enabled',
@@ -101,6 +107,18 @@ try {
             'gps_proximity_radius'
         ];
         
+        $booleanKeys = [
+            'attendance_multi_check_enabled', 'attendance_random_intervals_enabled',
+            'attendance_hide_timing_from_students', 'attendance_auto_trigger_enabled',
+            'attendance_auto_schedule_enabled', 'liveness_detection_enabled'
+        ];
+        $integerKeys = [
+            'attendance_default_total_checks', 'attendance_min_check_interval',
+            'attendance_max_check_interval', 'attendance_first_check_delay',
+            'attendance_check_window_minutes', 'attendance_response_window_minutes',
+            'face_confidence_threshold', 'gps_proximity_radius'
+        ];
+        
         $updated = 0;
         
         foreach ($data as $key => $value) {
@@ -108,25 +126,26 @@ try {
                 continue;
             }
             
-            // Check if setting exists
+            $type = in_array($key, $booleanKeys) ? 'boolean' : (in_array($key, $integerKeys) ? 'integer' : 'string');
+            
             $checkQuery = "SELECT id FROM system_settings WHERE `key` = :key";
             $stmt = $db->prepare($checkQuery);
             $stmt->bindParam(':key', $key);
             $stmt->execute();
             
             if ($stmt->fetch()) {
-                // Update existing
-                $updateQuery = "UPDATE system_settings SET value = :value WHERE `key` = :key";
+                $updateQuery = "UPDATE system_settings SET value = :value, type = :type WHERE `key` = :key";
                 $stmt = $db->prepare($updateQuery);
                 $stmt->bindParam(':value', $value);
+                $stmt->bindParam(':type', $type);
                 $stmt->bindParam(':key', $key);
                 $stmt->execute();
             } else {
-                // Insert new
-                $insertQuery = "INSERT INTO system_settings (`key`, value) VALUES (:key, :value)";
+                $insertQuery = "INSERT INTO system_settings (`key`, value, type) VALUES (:key, :value, :type)";
                 $stmt = $db->prepare($insertQuery);
                 $stmt->bindParam(':key', $key);
                 $stmt->bindParam(':value', $value);
+                $stmt->bindParam(':type', $type);
                 $stmt->execute();
             }
             

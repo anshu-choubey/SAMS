@@ -29,18 +29,21 @@ try {
 
         switch ($type) {
             case 'attendance':
-                // Attendance settings for marking attendance
                 $settings = [
                     'min_attendance_threshold' => getSetting($db, 'min_attendance_threshold', 75),
                     'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
                     'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
                     'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
+                    'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                     'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 1),
+                    'random_intervals_enabled' => getSetting($db, 'attendance_random_intervals_enabled', true),
                     'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
                     'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
+                    'first_check_delay' => getSetting($db, 'attendance_first_check_delay', 10),
                     'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
                     'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true),
-                    'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true)
+                    'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true),
+                    'auto_schedule_enabled' => getSetting($db, 'attendance_auto_schedule_enabled', true)
                 ];
                 Response::success($settings);
                 break;
@@ -80,12 +83,16 @@ try {
                         'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
                         'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
                         'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
+                        'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                         'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 1),
+                        'random_intervals_enabled' => getSetting($db, 'attendance_random_intervals_enabled', true),
                         'min_check_interval' => getSetting($db, 'attendance_min_check_interval', 10),
                         'max_check_interval' => getSetting($db, 'attendance_max_check_interval', 25),
+                        'first_check_delay' => getSetting($db, 'attendance_first_check_delay', 10),
                         'check_window_minutes' => getSetting($db, 'attendance_check_window_minutes', 3),
                         'hide_timing_from_students' => getSetting($db, 'attendance_hide_timing_from_students', true),
-                        'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true)
+                        'auto_trigger_enabled' => getSetting($db, 'attendance_auto_trigger_enabled', true),
+                        'auto_schedule_enabled' => getSetting($db, 'attendance_auto_schedule_enabled', true)
                     ],
                     'system' => [
                         'session_timeout' => 3600,
