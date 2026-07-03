@@ -16,13 +16,20 @@ require_once __DIR__ . '/../../includes/helpers/Validator.php';
 
 function getSystemSettingValue(PDO $db, string $settingKey, $defaultValue = null) {
     try {
-        $query = "SELECT value FROM system_settings WHERE `key` = :setting_key LIMIT 1";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':setting_key', $settingKey);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($result && $result['value'] !== null) {
-            return $result['value'];
+        $queries = [
+            "SELECT value FROM system_settings WHERE `key` = :k LIMIT 1",
+            "SELECT setting_value AS value FROM system_settings WHERE setting_key = :k LIMIT 1"
+        ];
+        foreach ($queries as $query) {
+            try {
+                $stmt = $db->prepare($query);
+                $stmt->bindParam(':k', $settingKey);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($result && isset($result['value']) && $result['value'] !== null) {
+                    return $result['value'];
+                }
+            } catch (Exception $e) { continue; }
         }
         return $defaultValue;
     } catch (Exception $e) {
@@ -220,15 +227,24 @@ try {
     $windowEnd = strtotime($checkPoint['window_end_time']);
     $isLate = $now > $windowEnd;
 
-    // Check if already responded
-    $existingQuery = "SELECT id FROM attendance_check_responses 
-                      WHERE check_point_id = :check_point_id AND student_id = :student_id";
+    // Check if already responded successfully — allow retry for failed responses
+    $existingQuery = "SELECT id, verification_status FROM attendance_check_responses 
+                      WHERE check_point_id = :check_point_id AND student_id = :student_id
+                      ORDER BY response_time DESC LIMIT 1";
     $stmt = $db->prepare($existingQuery);
     $stmt->bindParam(':check_point_id', $data['check_point_id']);
     $stmt->bindParam(':student_id', $studentData['id']);
     $stmt->execute();
-    if ($stmt->fetch()) {
-        Response::error('You have already responded to this check', 400);
+    $existingResponse = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($existingResponse) {
+        if ($existingResponse['verification_status'] === 'success') {
+            Response::error('You have already responded to this check', 400);
+        }
+        // Delete the failed response so the student can retry
+        $deleteQuery = "DELETE FROM attendance_check_responses WHERE id = :id";
+        $stmt = $db->prepare($deleteQuery);
+        $stmt->bindParam(':id', $existingResponse['id']);
+        $stmt->execute();
     }
 
     // Calculate distance

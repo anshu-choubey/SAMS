@@ -137,41 +137,59 @@ try {
     $responseWindowMinutes = 3;
     
     // Load settings from admin panel (system_settings table)
-    try {
-        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
-            'attendance_multi_check_enabled', 'attendance_default_total_checks',
-            'attendance_random_intervals_enabled', 'attendance_min_check_interval',
-            'attendance_max_check_interval', 'attendance_check_window_minutes',
-            'attendance_hide_timing_from_students'
-        )";
-        $stmt = $db->query($settingsQuery);
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            switch ($row['key']) {
-                case 'attendance_multi_check_enabled':
-                    $multiCheckEnabled = $row['value'] === 'true' || $row['value'] === '1';
-                    break;
-                case 'attendance_default_total_checks':
-                    $totalChecksPlanned = (int)$row['value'];
-                    break;
-                case 'attendance_random_intervals_enabled':
-                    $randomIntervalsEnabled = $row['value'] === 'true' || $row['value'] === '1';
-                    break;
-                case 'attendance_min_check_interval':
-                    $minIntervalMinutes = (int)$row['value'];
-                    break;
-                case 'attendance_max_check_interval':
-                    $maxIntervalMinutes = (int)$row['value'];
-                    break;
-                case 'attendance_check_window_minutes':
-                    $responseWindowMinutes = (int)$row['value'];
-                    break;
-                case 'attendance_hide_timing_from_students':
-                    $hideTimingFromStudents = $row['value'] === 'true' || $row['value'] === '1';
-                    break;
+    // Try both column name patterns (key/value vs setting_key/setting_value)
+    $settingsKeys = [
+        'attendance_multi_check_enabled', 'attendance_default_total_checks',
+        'attendance_random_intervals_enabled', 'attendance_min_check_interval',
+        'attendance_max_check_interval', 'attendance_check_window_minutes',
+        'attendance_hide_timing_from_students'
+    ];
+    $placeholders = implode(',', array_fill(0, count($settingsKeys), '?'));
+    
+    $settingsQueries = [
+        "SELECT `key` AS k, `value` AS v FROM system_settings WHERE `key` IN ($placeholders)",
+        "SELECT setting_key AS k, setting_value AS v FROM system_settings WHERE setting_key IN ($placeholders)"
+    ];
+    
+    $settingsLoaded = false;
+    foreach ($settingsQueries as $settingsQuery) {
+        try {
+            $stmt = $db->prepare($settingsQuery);
+            $stmt->execute($settingsKeys);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($rows)) {
+                foreach ($rows as $row) {
+                    switch ($row['k']) {
+                        case 'attendance_multi_check_enabled':
+                            $multiCheckEnabled = $row['v'] === 'true' || $row['v'] === '1';
+                            break;
+                        case 'attendance_default_total_checks':
+                            $totalChecksPlanned = (int)$row['v'];
+                            break;
+                        case 'attendance_random_intervals_enabled':
+                            $randomIntervalsEnabled = $row['v'] === 'true' || $row['v'] === '1';
+                            break;
+                        case 'attendance_min_check_interval':
+                            $minIntervalMinutes = (int)$row['v'];
+                            break;
+                        case 'attendance_max_check_interval':
+                            $maxIntervalMinutes = (int)$row['v'];
+                            break;
+                        case 'attendance_check_window_minutes':
+                            $responseWindowMinutes = (int)$row['v'];
+                            break;
+                        case 'attendance_hide_timing_from_students':
+                            $hideTimingFromStudents = $row['v'] === 'true' || $row['v'] === '1';
+                            break;
+                    }
+                }
+                $settingsLoaded = true;
+                break;
             }
-        }
-    } catch (Exception $e) {
-        error_log("Failed to load attendance settings: " . $e->getMessage());
+        } catch (Exception $e) { continue; }
+    }
+    if (!$settingsLoaded) {
+        error_log("Warning: Could not load attendance settings from system_settings table, using defaults");
     }
     
     // Schedule duration override (if set per-class)

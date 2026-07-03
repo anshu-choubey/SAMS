@@ -29,12 +29,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
     
     if ($key && isset($_POST['setting_value']) && in_array($key, $editableKeys)) {
         try {
-            // Get setting metadata
-            $checkQuery = "SELECT `type`, `validation_rule` FROM system_settings WHERE `key` = :key LIMIT 1";
-            $stmt = $db->prepare($checkQuery);
-            $stmt->bindParam(':key', $key);
-            $stmt->execute();
-            $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+            // Get setting metadata — try both column name patterns
+            $setting = null;
+            $checkQueries = [
+                "SELECT `type`, `validation_rule` FROM system_settings WHERE `key` = :key LIMIT 1",
+                "SELECT setting_type AS `type`, NULL AS `validation_rule` FROM system_settings WHERE setting_key = :key LIMIT 1"
+            ];
+            foreach ($checkQueries as $cq) {
+                try {
+                    $stmt = $db->prepare($cq);
+                    $stmt->bindParam(':key', $key);
+                    $stmt->execute();
+                    $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($setting) break;
+                } catch (Exception $e) { continue; }
+            }
             
             if ($setting) {
                 $type = $setting['type'];
@@ -80,12 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
                 
                 // Update if no errors
                 if (!$errorMessage) {
-                    $updateQuery = "UPDATE system_settings SET `value` = :value, `updated_at` = NOW() WHERE `key` = :key";
-                    $updateStmt = $db->prepare($updateQuery);
-                    $updateStmt->bindParam(':key', $key);
-                    $updateStmt->bindParam(':value', $validValue);
+                    $updated = false;
+                    $updateQueries = [
+                        "UPDATE system_settings SET `value` = :value, `updated_at` = NOW() WHERE `key` = :key",
+                        "UPDATE system_settings SET setting_value = :value WHERE setting_key = :key"
+                    ];
+                    foreach ($updateQueries as $uq) {
+                        try {
+                            $updateStmt = $db->prepare($uq);
+                            $updateStmt->bindParam(':key', $key);
+                            $updateStmt->bindParam(':value', $validValue);
+                            $updateStmt->execute();
+                            if ($updateStmt->rowCount() > 0) { $updated = true; break; }
+                        } catch (Exception $e) { continue; }
+                    }
                     
-                    if ($updateStmt->execute()) {
+                    if ($updated) {
                         $successMessage = "✓ Setting '" . htmlspecialchars($key) . "' updated successfully!";
                     } else {
                         $errorMessage = "Failed to update setting";
@@ -123,9 +142,19 @@ $settingLabels = [
 if ($db) {
     try {
         $placeholders = implode(',', array_fill(0, count($allowedSettings), '?'));
-        $stmt = $db->prepare("SELECT `key`, `value`, `type`, `description`, `category`, `validation_rule` FROM system_settings WHERE `key` IN ($placeholders) ORDER BY `key`");
-        $stmt->execute($allowedSettings);
-        $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $readQueries = [
+            "SELECT `key`, `value`, `type`, `description`, `category`, `validation_rule` FROM system_settings WHERE `key` IN ($placeholders) ORDER BY `key`",
+            "SELECT setting_key AS `key`, setting_value AS `value`, setting_type AS `type`, '' AS `description`, 'Attendance' AS `category`, NULL AS `validation_rule` FROM system_settings WHERE setting_key IN ($placeholders) ORDER BY setting_key"
+        ];
+        $allSettings = [];
+        foreach ($readQueries as $rq) {
+            try {
+                $stmt = $db->prepare($rq);
+                $stmt->execute($allowedSettings);
+                $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($allSettings)) break;
+            } catch (Exception $e) { continue; }
+        }
         
         // Add any missing settings with defaults
         $foundKeys = array_column($allSettings, 'key');

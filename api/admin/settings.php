@@ -33,12 +33,21 @@ try {
         $key = $_GET['key'] ?? null;
         
         if ($key) {
-            // Get single setting
-            $query = "SELECT `key`, `value`, `type`, `description` FROM system_settings WHERE `key` = :key LIMIT 1";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':key', $key);
-            $stmt->execute();
-            $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+            // Get single setting — try both column name patterns
+            $setting = null;
+            $queries = [
+                "SELECT `key`, `value`, `type`, `description` FROM system_settings WHERE `key` = :key LIMIT 1",
+                "SELECT setting_key AS `key`, setting_value AS `value`, setting_type AS `type`, '' AS `description` FROM system_settings WHERE setting_key = :key LIMIT 1"
+            ];
+            foreach ($queries as $q) {
+                try {
+                    $stmt = $db->prepare($q);
+                    $stmt->bindParam(':key', $key);
+                    $stmt->execute();
+                    $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($setting) break;
+                } catch (Exception $e) { continue; }
+            }
             
             if (!$setting) {
                 Response::error('Setting not found', 404);
@@ -47,10 +56,19 @@ try {
             // Cast value based on type
             Response::success(castSettingValue($setting));
         } else {
-            // Get all settings organized by category
-            $query = "SELECT `key`, `value`, `type`, `description`, `category` FROM system_settings ORDER BY `category`, `key`";
-            $stmt = $db->query($query);
-            $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Get all settings organized by category — try both column name patterns
+            $allSettings = [];
+            $queries = [
+                "SELECT `key`, `value`, `type`, `description`, `category` FROM system_settings ORDER BY `category`, `key`",
+                "SELECT setting_key AS `key`, setting_value AS `value`, setting_type AS `type`, '' AS `description`, 'General' AS `category` FROM system_settings ORDER BY setting_key"
+            ];
+            foreach ($queries as $q) {
+                try {
+                    $stmt = $db->query($q);
+                    $allSettings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    if (!empty($allSettings)) break;
+                } catch (Exception $e) { continue; }
+            }
             
             // Organize by category
             $settingsByCategory = [];
@@ -83,12 +101,21 @@ try {
         $key = $data['key'];
         $value = $data['value'];
         
-        // Get current setting to validate type
-        $checkQuery = "SELECT `type`, `validation_rule` FROM system_settings WHERE `key` = :key LIMIT 1";
-        $stmt = $db->prepare($checkQuery);
-        $stmt->bindParam(':key', $key);
-        $stmt->execute();
-        $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Get current setting to validate type — try both column patterns
+        $setting = null;
+        $checkQueries = [
+            "SELECT `type`, `validation_rule` FROM system_settings WHERE `key` = :key LIMIT 1",
+            "SELECT setting_type AS `type`, NULL AS `validation_rule` FROM system_settings WHERE setting_key = :key LIMIT 1"
+        ];
+        foreach ($checkQueries as $cq) {
+            try {
+                $stmt = $db->prepare($cq);
+                $stmt->bindParam(':key', $key);
+                $stmt->execute();
+                $setting = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($setting) break;
+            } catch (Exception $e) { continue; }
+        }
         
         if (!$setting) {
             Response::error("Setting '$key' does not exist", 404);
@@ -133,15 +160,23 @@ try {
             }
         }
         
-        // Update setting
-        $updateQuery = "UPDATE system_settings 
-                       SET `value` = :value, `updated_at` = NOW()
-                       WHERE `key` = :key";
-        $stmt = $db->prepare($updateQuery);
-        $stmt->bindParam(':key', $key);
-        $stmt->bindParam(':value', $value);
+        // Update setting — try both column patterns
+        $updated = false;
+        $updateQueries = [
+            "UPDATE system_settings SET `value` = :value, `updated_at` = NOW() WHERE `key` = :key",
+            "UPDATE system_settings SET setting_value = :value WHERE setting_key = :key"
+        ];
+        foreach ($updateQueries as $uq) {
+            try {
+                $stmt = $db->prepare($uq);
+                $stmt->bindParam(':key', $key);
+                $stmt->bindParam(':value', $value);
+                $stmt->execute();
+                if ($stmt->rowCount() > 0) { $updated = true; break; }
+            } catch (Exception $e) { continue; }
+        }
         
-        if (!$stmt->execute()) {
+        if (!$updated) {
             Response::error('Failed to update setting', 500);
         }
         

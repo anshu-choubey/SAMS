@@ -125,39 +125,42 @@ try {
  * Get setting value from database with default fallback
  */
 function getSetting($db, $key, $default = null) {
-    try {
-        $query = "SELECT `value`, `type` FROM system_settings WHERE `key` = :key LIMIT 1";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':key', $key);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$result) {
-            return $default;
-        }
-        
-        $value = $result['value'];
-        $type = $result['type'] ?? null;
-        
-        if ($type === 'integer' || $type === 'number') {
-            return intval($value);
-        } elseif ($type === 'float') {
-            return floatval($value);
-        } elseif ($type === 'boolean') {
-            return $value === '1' || strtolower($value) === 'true';
-        }
-        
-        if ($type === null && is_numeric($value) && strpos($value, '.') === false) {
-            return intval($value);
-        }
-        if ($type === null && ($value === 'true' || $value === 'false')) {
-            return $value === 'true';
-        }
-        
-        return $value;
-    } catch (Exception $e) {
-        error_log("Error getting setting $key: " . $e->getMessage());
-        return $default;
+    $queries = [
+        "SELECT `value`, `type` FROM system_settings WHERE `key` = :key LIMIT 1",
+        "SELECT setting_value AS `value`, setting_type AS `type` FROM system_settings WHERE setting_key = :key LIMIT 1"
+    ];
+    foreach ($queries as $query) {
+        try {
+            $stmt = $db->prepare($query);
+            $stmt->bindParam(':key', $key);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$result || !isset($result['value'])) {
+                continue;
+            }
+            
+            $value = $result['value'];
+            $type = $result['type'] ?? null;
+            
+            if ($type === 'integer' || $type === 'number') {
+                return intval($value);
+            } elseif ($type === 'float') {
+                return floatval($value);
+            } elseif ($type === 'boolean') {
+                return $value === '1' || strtolower($value) === 'true';
+            }
+            
+            if ($type === null && is_numeric($value) && strpos($value, '.') === false) {
+                return intval($value);
+            }
+            if ($type === null && ($value === 'true' || $value === 'false')) {
+                return $value === 'true';
+            }
+            
+            return $value;
+        } catch (Exception $e) { continue; }
     }
+    return $default;
 }
 ?>
