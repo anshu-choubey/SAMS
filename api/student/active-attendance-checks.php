@@ -278,13 +278,17 @@ try {
         ];
     }, $activeSessions);
 
-    // Determine if student should stay on screen
+    // Derive flags from session data (which uses admin settings applied at start-class time)
     $shouldStayOnScreen = false;
+    $hasRandomIntervals = false;
     foreach ($activeSessions as $session) {
         if (isset($session['hide_timing_from_students']) && 
             ($session['hide_timing_from_students'] === '1' || $session['hide_timing_from_students'] === true)) {
             $shouldStayOnScreen = true;
-            break;
+        }
+        if (isset($session['random_intervals_enabled']) && 
+            ($session['random_intervals_enabled'] === '1' || $session['random_intervals_enabled'] === true)) {
+            $hasRandomIntervals = true;
         }
     }
 
@@ -293,7 +297,7 @@ try {
         'total_pending' => count($formattedChecks),
         'active_sessions' => $formattedSessions,
         'stay_on_screen' => $shouldStayOnScreen,
-        'has_random_intervals' => $shouldStayOnScreen
+        'has_random_intervals' => $hasRandomIntervals
     ], count($formattedChecks) > 0 
         ? 'Active check found - respond now!' 
         : (count($activeSessions) > 0 
