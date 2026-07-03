@@ -128,10 +128,10 @@ try {
     // INTERVAL CONFIGURATION - Priority: Request > Schedule > System Settings
     // ═══════════════════════════════════════════════════════════════════════
     
-    // Step 1: Start with defaults
+    // Step 1: Initialize variables (will be populated from DB)
     $durationMinutes = 60;
     $multiCheckEnabled = true;
-    $totalChecksPlanned = 3;
+    $totalChecksPlanned = 1;
     $autoSchedule = true;
     $firstCheckDelay = 10;
     $randomIntervalsEnabled = true;
@@ -141,19 +141,9 @@ try {
     $autoTriggerChecks = true;
     $responseWindowMinutes = 3;
     
-    // Step 2: Apply system-wide settings
+    // Step 2: Load ALL settings from database
     try {
-        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
-            'attendance_multi_check_enabled',
-            'attendance_default_total_checks',
-            'attendance_random_intervals_enabled',
-            'attendance_min_interval_minutes', 
-            'attendance_max_interval_minutes',
-            'attendance_hide_timing_from_students',
-            'attendance_auto_trigger_enabled',
-            'attendance_response_window_minutes',
-            'attendance_check_window_minutes'
-        )";
+        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` LIKE 'attendance_%'";
         $stmt = $db->query($settingsQuery);
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             switch ($row['key']) {
@@ -172,6 +162,12 @@ try {
                 case 'attendance_max_interval_minutes':
                     $maxIntervalMinutes = (int)$row['value'];
                     break;
+                case 'attendance_min_check_interval':
+                    $minIntervalMinutes = (int)$row['value'];
+                    break;
+                case 'attendance_max_check_interval':
+                    $maxIntervalMinutes = (int)$row['value'];
+                    break;
                 case 'attendance_hide_timing_from_students':
                     $hideTimingFromStudents = $row['value'] === 'true' || $row['value'] === '1';
                     break;
@@ -184,10 +180,17 @@ try {
                 case 'attendance_check_window_minutes':
                     $responseWindowMinutes = (int)$row['value'];
                     break;
+                case 'attendance_first_check_delay':
+                    $firstCheckDelay = (int)$row['value'];
+                    break;
+                case 'attendance_auto_schedule_enabled':
+                    $autoSchedule = $row['value'] === 'true' || $row['value'] === '1';
+                    break;
             }
         }
     } catch (Exception $e) {
         // Use defaults if settings fetch fails
+        error_log("Failed to load attendance settings: " . $e->getMessage());
     }
     
     // Step 3: Apply SCHEDULE-SPECIFIC settings (override system settings)
