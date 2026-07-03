@@ -14,7 +14,7 @@ header('Content-Type: application/json');
 try {
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../config/constants.php';
-    $firebaseHelperPath = dirname(__DIR__, 3) . '/config/firebase-impl.php';
+    $firebaseHelperPath = dirname(__DIR__, 2) . '/config/firebase-impl.php';
     require_once $firebaseHelperPath;
     require_once __DIR__ . '/../../includes/middleware/CORS.php';
     require_once __DIR__ . '/../../includes/middleware/Auth.php';
