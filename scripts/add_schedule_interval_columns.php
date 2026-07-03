@@ -30,7 +30,7 @@ try {
     
     $columns = [
         // Schedule-specific interval settings
-        ['schedules', 'total_checks', 'INT DEFAULT 3'],
+        ['schedules', 'total_checks', 'INT DEFAULT NULL'],
         ['schedules', 'min_interval_minutes', 'INT DEFAULT 10'],
         ['schedules', 'max_interval_minutes', 'INT DEFAULT 25'],
         ['schedules', 'response_window_minutes', 'INT DEFAULT 3'],

@@ -19,7 +19,7 @@ try {
     
     $settings = [
         ['attendance_multi_check_enabled', 'true', 'Enable multi-check attendance by default'],
-        ['attendance_default_total_checks', '3', 'Default number of attendance checks per class'],
+        ['attendance_default_total_checks', '2', 'Default number of attendance checks per class'],
         ['attendance_auto_schedule_enabled', 'true', 'Enable auto-scheduling of checks by default'],
         ['attendance_first_check_delay', '20', 'Minutes before first attendance check'],
         ['attendance_min_check_interval', '15', 'Minimum minutes between checks'],

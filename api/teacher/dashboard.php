@@ -116,13 +116,6 @@ try {
                     TIME_FORMAT(sc.end_time, '%H:%i:%s') as end_time,
                     sc.classroom,
                     sc.building,
-                    sc.total_checks,
-                    sc.min_interval_minutes,
-                    sc.max_interval_minutes,
-                    sc.response_window_minutes,
-                    sc.hide_timing_from_students,
-                    sc.random_intervals_enabled,
-                    sc.auto_trigger_enabled,
                     sc.duration_minutes,
                     (SELECT COUNT(*) FROM students s WHERE s.department_id = ta.department_id AND s.semester = ta.semester 
                      AND (ta.section IS NULL OR s.section = ta.section)) as total_students,
@@ -203,15 +196,7 @@ try {
             'session_active' => $sessionActive,
             'is_startable' => !$sessionStarted && !$sessionEndedToday && $isStartTimeWindow,
             'is_completed' => $sessionEndedToday || (!$isWithinTime && $currentTime > $endTime),
-            // Interval settings for this schedule
             'interval_settings' => [
-                'total_checks' => (int)($class['total_checks'] ?? 3),
-                'min_interval_minutes' => (int)($class['min_interval_minutes'] ?? 10),
-                'max_interval_minutes' => (int)($class['max_interval_minutes'] ?? 25),
-                'response_window_minutes' => (int)($class['response_window_minutes'] ?? 3),
-                'hide_timing_from_students' => (bool)($class['hide_timing_from_students'] ?? true),
-                'random_intervals_enabled' => (bool)($class['random_intervals_enabled'] ?? true),
-                'auto_trigger_enabled' => (bool)($class['auto_trigger_enabled'] ?? true),
                 'duration_minutes' => (int)($class['duration_minutes'] ?? 60)
             ]
         ];

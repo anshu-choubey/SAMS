@@ -48,13 +48,6 @@ try {
                         sc.classroom,
                         sc.building,
                         sc.is_active,
-                        sc.total_checks,
-                        sc.min_interval_minutes,
-                        sc.max_interval_minutes,
-                        sc.response_window_minutes,
-                        sc.hide_timing_from_students,
-                        sc.random_intervals_enabled,
-                        sc.auto_trigger_enabled,
                         sc.duration_minutes,
                         sub.name as subject_name,
                         sub.code as subject_code,
@@ -95,13 +88,6 @@ try {
                         sc.classroom,
                         sc.building,
                         sc.is_active,
-                        sc.total_checks,
-                        sc.min_interval_minutes,
-                        sc.max_interval_minutes,
-                        sc.response_window_minutes,
-                        sc.hide_timing_from_students,
-                        sc.random_intervals_enabled,
-                        sc.auto_trigger_enabled,
                         sc.duration_minutes,
                         sub.name as subject_name,
                         sub.code as subject_code,
@@ -178,13 +164,6 @@ try {
         $params = [':id' => $data['schedule_id']];
         
         $allowedFields = [
-            'total_checks' => 'integer',
-            'min_interval_minutes' => 'integer',
-            'max_interval_minutes' => 'integer',
-            'response_window_minutes' => 'integer',
-            'hide_timing_from_students' => 'boolean',
-            'random_intervals_enabled' => 'boolean',
-            'auto_trigger_enabled' => 'boolean',
             'duration_minutes' => 'integer',
             'classroom' => 'string',
             'building' => 'string',
@@ -258,15 +237,7 @@ function formatSchedule($schedule) {
         'section' => $schedule['section'],
         'department_name' => $schedule['department_name'] ?? null,
         'department_id' => (int)($schedule['department_id'] ?? 0),
-        // Interval settings
         'interval_settings' => [
-            'total_checks' => (int)($schedule['total_checks'] ?? 3),
-            'min_interval_minutes' => (int)($schedule['min_interval_minutes'] ?? 10),
-            'max_interval_minutes' => (int)($schedule['max_interval_minutes'] ?? 25),
-            'response_window_minutes' => (int)($schedule['response_window_minutes'] ?? 3),
-            'hide_timing_from_students' => (bool)($schedule['hide_timing_from_students'] ?? true),
-            'random_intervals_enabled' => (bool)($schedule['random_intervals_enabled'] ?? true),
-            'auto_trigger_enabled' => (bool)($schedule['auto_trigger_enabled'] ?? true),
             'duration_minutes' => (int)($schedule['duration_minutes'] ?? 60)
         ]
     ];

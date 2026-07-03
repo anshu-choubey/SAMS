@@ -90,11 +90,7 @@ try {
         Response::error('This schedule is not assigned to you', 403);
     }
 
-    // Now get full schedule details including interval settings
-    $scheduleQuery = "SELECT sc.*, 
-                             sc.total_checks, sc.min_interval_minutes, sc.max_interval_minutes,
-                             sc.response_window_minutes, sc.hide_timing_from_students,
-                             sc.random_intervals_enabled, sc.auto_trigger_enabled, sc.duration_minutes,
+    $scheduleQuery = "SELECT sc.*, sc.duration_minutes,
                              ta.teacher_id, ta.subject_id, ta.department_id, ta.semester, ta.section, 
                              ta.is_active as assignment_active
                       FROM schedules sc
@@ -178,29 +174,7 @@ try {
         error_log("Failed to load attendance settings: " . $e->getMessage());
     }
     
-    // Step 3: Apply SCHEDULE-SPECIFIC settings (override system settings)
-    // These are set by admin per-class
-    if (isset($schedule['total_checks']) && $schedule['total_checks'] !== null) {
-        $totalChecksPlanned = (int)$schedule['total_checks'];
-    }
-    if (isset($schedule['min_interval_minutes']) && $schedule['min_interval_minutes'] !== null) {
-        $minIntervalMinutes = (int)$schedule['min_interval_minutes'];
-    }
-    if (isset($schedule['max_interval_minutes']) && $schedule['max_interval_minutes'] !== null) {
-        $maxIntervalMinutes = (int)$schedule['max_interval_minutes'];
-    }
-    if (isset($schedule['response_window_minutes']) && $schedule['response_window_minutes'] !== null) {
-        $responseWindowMinutes = (int)$schedule['response_window_minutes'];
-    }
-    if (isset($schedule['hide_timing_from_students']) && $schedule['hide_timing_from_students'] !== null) {
-        $hideTimingFromStudents = (bool)$schedule['hide_timing_from_students'];
-    }
-    if (isset($schedule['random_intervals_enabled']) && $schedule['random_intervals_enabled'] !== null) {
-        $randomIntervalsEnabled = (bool)$schedule['random_intervals_enabled'];
-    }
-    if (isset($schedule['auto_trigger_enabled']) && $schedule['auto_trigger_enabled'] !== null) {
-        $autoTriggerChecks = (bool)$schedule['auto_trigger_enabled'];
-    }
+    // Schedule duration override (if set per-class)
     if (isset($schedule['duration_minutes']) && $schedule['duration_minutes'] !== null) {
         $durationMinutes = (int)$schedule['duration_minutes'];
     }
