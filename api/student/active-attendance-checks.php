@@ -304,6 +304,19 @@ try {
                     $stmt->execute();
                     $sessInfo = $stmt->fetch(PDO::FETCH_ASSOC);
                     
+                    // Get best check response data for this student
+                    $bestCheck = null;
+                    $bestQuery = "SELECT face_confidence_score, student_latitude, student_longitude,
+                                         teacher_latitude, teacher_longitude, distance_meters
+                                  FROM attendance_check_responses 
+                                  WHERE session_id = :sess_id AND student_id = :sid AND verification_status = 'success'
+                                  ORDER BY face_confidence_score DESC LIMIT 1";
+                    $stmt = $db->prepare($bestQuery);
+                    $stmt->bindParam(':sess_id', $session['session_id']);
+                    $stmt->bindParam(':sid', $studentData['id']);
+                    $stmt->execute();
+                    $bestCheck = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
                     if ($sessInfo) {
                         $markQuery = "INSERT INTO attendance 
                                       (student_id, schedule_id, assignment_id, teacher_id, department_id,
@@ -312,9 +325,9 @@ try {
                                        teacher_latitude, teacher_longitude, distance_meters,
                                        verification_status)
                                       VALUES (:sid, :sched, :assign, :tid, :did,
-                                              CURDATE(), 'present', 0,
-                                              0, 0,
-                                              :tlat, :tlon, 0,
+                                              CURDATE(), 'present', :face_conf,
+                                              :slat, :slon,
+                                              :tlat, :tlon, :dist,
                                               'success')";
                         $stmt = $db->prepare($markQuery);
                         $stmt->bindParam(':sid', $studentData['id']);
@@ -322,10 +335,20 @@ try {
                         $stmt->bindParam(':assign', $sessInfo['assignment_id']);
                         $stmt->bindParam(':tid', $sessInfo['teacher_id']);
                         $stmt->bindParam(':did', $sessInfo['department_id']);
-                        $stmt->bindParam(':tlat', $sessInfo['latitude']);
-                        $stmt->bindParam(':tlon', $sessInfo['longitude']);
+                        $faceConf = $bestCheck ? (float)$bestCheck['face_confidence_score'] : 0;
+                        $sLat = $bestCheck ? (float)$bestCheck['student_latitude'] : 0;
+                        $sLon = $bestCheck ? (float)$bestCheck['student_longitude'] : 0;
+                        $tLat = $bestCheck ? (float)$bestCheck['teacher_latitude'] : (float)$sessInfo['latitude'];
+                        $tLon = $bestCheck ? (float)$bestCheck['teacher_longitude'] : (float)$sessInfo['longitude'];
+                        $dist = $bestCheck ? (float)$bestCheck['distance_meters'] : 0;
+                        $stmt->bindParam(':face_conf', $faceConf);
+                        $stmt->bindParam(':slat', $sLat);
+                        $stmt->bindParam(':slon', $sLon);
+                        $stmt->bindParam(':tlat', $tLat);
+                        $stmt->bindParam(':tlon', $tLon);
+                        $stmt->bindParam(':dist', $dist);
                         $stmt->execute();
-                        error_log("Retroactive auto-mark: student {$studentData['id']} session {$session['session_id']}");
+                        error_log("Retroactive auto-mark: student {$studentData['id']} session {$session['session_id']} face={$faceConf}");
                     }
                 } catch (Exception $e) {
                     error_log("Retroactive auto-mark failed: " . $e->getMessage());
