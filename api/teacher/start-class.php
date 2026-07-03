@@ -130,14 +130,87 @@ try {
     // Auto-schedule configuration (intervals: 20min, 40min, 60min)
     $autoSchedule = isset($data['auto_schedule']) ? (bool)$data['auto_schedule'] : false;
     $firstCheckDelay = isset($data['first_check_delay']) ? (int)$data['first_check_delay'] : 20; // minutes
+    
+    // Random interval configuration (NEW)
+    // Get defaults from system settings
+    $randomIntervalsEnabled = true;
+    $minIntervalMinutes = 10;
+    $maxIntervalMinutes = 25;
+    $hideTimingFromStudents = true;
+    $autoTriggerChecks = true;
+    $responseWindowMinutes = 3;
+    
+    try {
+        $settingsQuery = "SELECT `key`, value FROM system_settings WHERE `key` IN (
+            'attendance_random_intervals_enabled',
+            'attendance_min_interval_minutes', 
+            'attendance_max_interval_minutes',
+            'attendance_hide_timing_from_students',
+            'attendance_auto_trigger_enabled',
+            'attendance_response_window_minutes'
+        )";
+        $stmt = $db->query($settingsQuery);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            switch ($row['key']) {
+                case 'attendance_random_intervals_enabled':
+                    $randomIntervalsEnabled = $row['value'] === 'true' || $row['value'] === '1';
+                    break;
+                case 'attendance_min_interval_minutes':
+                    $minIntervalMinutes = (int)$row['value'];
+                    break;
+                case 'attendance_max_interval_minutes':
+                    $maxIntervalMinutes = (int)$row['value'];
+                    break;
+                case 'attendance_hide_timing_from_students':
+                    $hideTimingFromStudents = $row['value'] === 'true' || $row['value'] === '1';
+                    break;
+                case 'attendance_auto_trigger_enabled':
+                    $autoTriggerChecks = $row['value'] === 'true' || $row['value'] === '1';
+                    break;
+                case 'attendance_response_window_minutes':
+                    $responseWindowMinutes = (int)$row['value'];
+                    break;
+            }
+        }
+    } catch (Exception $e) {
+        // Use defaults if settings fetch fails
+    }
+    
+    // Override with request data if provided
+    if (isset($data['random_intervals_enabled'])) {
+        $randomIntervalsEnabled = (bool)$data['random_intervals_enabled'];
+    }
+    if (isset($data['min_interval_minutes'])) {
+        $minIntervalMinutes = (int)$data['min_interval_minutes'];
+    }
+    if (isset($data['max_interval_minutes'])) {
+        $maxIntervalMinutes = (int)$data['max_interval_minutes'];
+    }
+    if (isset($data['hide_timing_from_students'])) {
+        $hideTimingFromStudents = (bool)$data['hide_timing_from_students'];
+    }
+    if (isset($data['auto_trigger_checks'])) {
+        $autoTriggerChecks = (bool)$data['auto_trigger_checks'];
+    }
+    if (isset($data['response_window_minutes'])) {
+        $responseWindowMinutes = (int)$data['response_window_minutes'];
+    }
 
-    // Start class session - insert into teacher_locations
+    // Generate first check time (random interval from class start)
+    $firstCheckMinutes = $randomIntervalsEnabled 
+        ? rand($minIntervalMinutes, $maxIntervalMinutes)
+        : $firstCheckDelay;
+    $nextCheckTime = date('Y-m-d H:i:s', strtotime("+{$firstCheckMinutes} minutes"));
+    
+    // Start class session - insert into teacher_locations with random interval config
     $insertQuery = "INSERT INTO teacher_locations 
                     (teacher_id, schedule_id, assignment_id, department_id, latitude, longitude, 
                      is_active, session_start, multi_check_enabled, total_checks_planned, 
-                     auto_schedule, first_check_delay)
+                     auto_schedule, first_check_delay, random_intervals_enabled, min_interval_minutes,
+                     max_interval_minutes, hide_timing_from_students, auto_trigger_checks, next_check_time)
                     VALUES (:teacher_id, :schedule_id, :assignment_id, :department_id, :latitude, :longitude, 
-                            TRUE, NOW(), :multi_check, :total_checks, :auto_schedule, :first_check_delay)";
+                            TRUE, NOW(), :multi_check, :total_checks, :auto_schedule, :first_check_delay,
+                            :random_intervals, :min_interval, :max_interval, :hide_timing, :auto_trigger, :next_check)";
     $stmt = $db->prepare($insertQuery);
     $stmt->bindParam(':teacher_id', $teacher['id']);
     $stmt->bindParam(':schedule_id', $data['schedule_id']);
@@ -149,6 +222,12 @@ try {
     $stmt->bindParam(':total_checks', $totalChecksPlanned);
     $stmt->bindParam(':auto_schedule', $autoSchedule, PDO::PARAM_BOOL);
     $stmt->bindParam(':first_check_delay', $firstCheckDelay);
+    $stmt->bindParam(':random_intervals', $randomIntervalsEnabled, PDO::PARAM_BOOL);
+    $stmt->bindParam(':min_interval', $minIntervalMinutes);
+    $stmt->bindParam(':max_interval', $maxIntervalMinutes);
+    $stmt->bindParam(':hide_timing', $hideTimingFromStudents, PDO::PARAM_BOOL);
+    $stmt->bindParam(':auto_trigger', $autoTriggerChecks, PDO::PARAM_BOOL);
+    $stmt->bindParam(':next_check', $nextCheckTime);
     $stmt->execute();
 
     $sessionId = $db->lastInsertId();
@@ -165,32 +244,54 @@ try {
     ]);
     $qrCode = base64_encode($qrData);
 
-    // Auto-schedule checks if enabled
-    if ($multiCheckEnabled && $autoSchedule && $totalChecksPlanned > 0) {
+    // Generate random check intervals if enabled
+    $scheduledIntervals = [];
+    $checkTimesForTeacher = []; // Only teacher sees actual times
+    
+    if ($multiCheckEnabled && $totalChecksPlanned > 0) {
         // Calculate random intervals (spread across duration)
-        $intervals = [];
-        $remainingTime = $durationMinutes - $firstCheckDelay;
-        $intervalGap = floor($remainingTime / max(1, $totalChecksPlanned - 1));
+        $usedMinutes = [];
         
         for ($i = 0; $i < $totalChecksPlanned; $i++) {
             if ($i == 0) {
-                $intervals[] = $firstCheckDelay;
+                // First check: random between min and max interval from start
+                $checkMinutes = $randomIntervalsEnabled 
+                    ? rand($minIntervalMinutes, $maxIntervalMinutes)
+                    : $firstCheckDelay;
             } else {
-                // Add randomness: ±5 minutes
-                $baseInterval = $firstCheckDelay + ($intervalGap * $i);
-                $randomOffset = rand(-5, 5);
-                $intervals[] = max($firstCheckDelay, min($durationMinutes - 5, $baseInterval + $randomOffset));
+                // Subsequent checks: random interval from last check
+                $lastCheckMinutes = end($scheduledIntervals);
+                $minNext = $lastCheckMinutes + $minIntervalMinutes;
+                $maxNext = min($durationMinutes - $responseWindowMinutes, $lastCheckMinutes + $maxIntervalMinutes);
+                
+                if ($minNext >= $maxNext || $minNext >= $durationMinutes - $responseWindowMinutes) {
+                    // Not enough time for more checks
+                    break;
+                }
+                
+                $checkMinutes = $randomIntervalsEnabled 
+                    ? rand($minNext, $maxNext)
+                    : $minNext;
             }
+            
+            // Ensure we don't exceed class duration
+            if ($checkMinutes >= $durationMinutes - $responseWindowMinutes) {
+                break;
+            }
+            
+            $scheduledIntervals[] = $checkMinutes;
         }
         
-        // Store scheduled times
-        foreach ($intervals as $index => $minutesFromStart) {
+        // Store scheduled check points (with is_scheduled = TRUE, is_active = FALSE initially)
+        foreach ($scheduledIntervals as $index => $minutesFromStart) {
             $scheduledTime = date('Y-m-d H:i:s', strtotime("+{$minutesFromStart} minutes"));
-            $windowEnd = date('Y-m-d H:i:s', strtotime("+5 minutes", strtotime($scheduledTime)));
+            $windowEnd = date('Y-m-d H:i:s', strtotime("+{$responseWindowMinutes} minutes", strtotime($scheduledTime)));
             
             $scheduleQuery = "INSERT INTO attendance_check_points 
-                              (session_id, schedule_id, check_number, check_time, window_end_time, is_active)
-                              VALUES (:session_id, :schedule_id, :check_number, :check_time, :window_end, FALSE)";
+                              (session_id, schedule_id, check_number, check_time, window_end_time, 
+                               is_active, is_scheduled, scheduled_time, was_auto_triggered)
+                              VALUES (:session_id, :schedule_id, :check_number, :check_time, :window_end, 
+                                      FALSE, TRUE, :scheduled_time, FALSE)";
             $stmt = $db->prepare($scheduleQuery);
             $stmt->bindParam(':session_id', $sessionId);
             $stmt->bindParam(':schedule_id', $data['schedule_id']);
@@ -198,11 +299,29 @@ try {
             $stmt->bindParam(':check_number', $checkNumber);
             $stmt->bindParam(':check_time', $scheduledTime);
             $stmt->bindParam(':window_end', $windowEnd);
+            $stmt->bindParam(':scheduled_time', $scheduledTime);
             $stmt->execute();
+            
+            $checkTimesForTeacher[] = [
+                'check_number' => $checkNumber,
+                'scheduled_at' => $scheduledTime,
+                'window_end' => $windowEnd,
+                'minutes_from_start' => $minutesFromStart
+            ];
         }
+        
+        // Update total_checks_planned to actual count
+        $actualChecksPlanned = count($scheduledIntervals);
+        $updateQuery = "UPDATE teacher_locations SET total_checks_planned = :count WHERE id = :session_id";
+        $stmt = $db->prepare($updateQuery);
+        $stmt->bindParam(':count', $actualChecksPlanned);
+        $stmt->bindParam(':session_id', $sessionId);
+        $stmt->execute();
+        $totalChecksPlanned = $actualChecksPlanned;
     }
     
     // Return ClassSession response
+    // Teacher gets full timing info, students get only count (via separate API)
     Response::success([
         'session_id' => (int)$sessionId,
         'schedule_id' => (int)$data['schedule_id'],
@@ -213,8 +332,16 @@ try {
         'multi_check_enabled' => $multiCheckEnabled,
         'total_checks_planned' => $totalChecksPlanned,
         'auto_schedule' => $autoSchedule,
-        'scheduled_check_times' => $autoSchedule ? $intervals : []
-    ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance enabled ({$totalChecksPlanned} " . ($autoSchedule ? "auto-scheduled" : "manual") . " checks planned)." : 'Single attendance check.'));
+        'random_intervals_enabled' => $randomIntervalsEnabled,
+        'min_interval_minutes' => $minIntervalMinutes,
+        'max_interval_minutes' => $maxIntervalMinutes,
+        'hide_timing_from_students' => $hideTimingFromStudents,
+        'response_window_minutes' => $responseWindowMinutes,
+        // Teacher sees scheduled times
+        'scheduled_check_times' => $checkTimesForTeacher,
+        // For backward compatibility
+        'scheduled_check_intervals' => $scheduledIntervals
+    ], 'Class session started successfully. ' . ($multiCheckEnabled ? "Multi-check attendance with random intervals ({$totalChecksPlanned} checks). " . ($hideTimingFromStudents ? "Timing hidden from students." : "") : 'Single attendance check.'));
 
 } catch (Exception $e) {
     http_response_code(500);

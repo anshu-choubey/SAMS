@@ -95,6 +95,100 @@ try {
     if ($validator->hasErrors()) {
         Response::validationError($validator->getErrors());
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════
+    // SERVER-SIDE FACE VERIFICATION VALIDATION (Anti-Spoofing)
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    $faceConfidence = (float)$data['face_confidence'];
+    $securityIssues = [];
+    
+    // 1. Face confidence range validation
+    //    - Must be between 0 and 100
+    //    - Suspiciously perfect scores (99-100) are rare in real scenarios
+    if ($faceConfidence < 0 || $faceConfidence > 100) {
+        Response::error('Invalid face confidence value', 400);
+    }
+    
+    if ($faceConfidence > 99.5) {
+        // Suspiciously perfect - may be hardcoded/spoofed
+        $securityIssues[] = 'perfect_score_suspicious';
+        error_log("Security: Suspiciously perfect face confidence ({$faceConfidence}) from user {$user['id']}");
+    }
+    
+    // 2. Rate limiting - prevent rapid-fire attempts
+    $rateLimitQuery = "SELECT COUNT(*) as attempt_count, 
+                              MAX(response_time) as last_attempt
+                       FROM attendance_check_responses 
+                       WHERE student_id = (SELECT id FROM students WHERE user_id = :user_id)
+                       AND response_time > DATE_SUB(NOW(), INTERVAL 30 SECOND)";
+    $stmt = $db->prepare($rateLimitQuery);
+    $stmt->bindParam(':user_id', $user['id']);
+    $stmt->execute();
+    $rateCheck = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ((int)($rateCheck['attempt_count'] ?? 0) > 3) {
+        Response::error('Too many attempts. Please wait a moment before trying again.', 429);
+    }
+    
+    // 3. Check for suspicious patterns in recent attempts
+    $patternQuery = "SELECT face_confidence_score, distance_meters, verification_status, response_time
+                     FROM attendance_check_responses 
+                     WHERE student_id = (SELECT id FROM students WHERE user_id = :user_id)
+                     AND response_time > DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+                     ORDER BY response_time DESC
+                     LIMIT 10";
+    $stmt = $db->prepare($patternQuery);
+    $stmt->bindParam(':user_id', $user['id']);
+    $stmt->execute();
+    $recentAttempts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (count($recentAttempts) >= 3) {
+        // Check for identical confidence scores (spoofing indicator)
+        $confidenceValues = array_column($recentAttempts, 'face_confidence_score');
+        $uniqueConfidences = array_unique($confidenceValues);
+        if (count($uniqueConfidences) === 1 && count($confidenceValues) >= 3) {
+            $securityIssues[] = 'identical_confidence_pattern';
+            error_log("Security: Identical confidence pattern detected for user {$user['id']}: " . implode(',', $confidenceValues));
+        }
+        
+        // Check for multiple failures followed by sudden success
+        $recentStatuses = array_column($recentAttempts, 'verification_status');
+        $failCount = count(array_filter($recentStatuses, fn($s) => $s !== 'success'));
+        if ($failCount >= 3 && $faceConfidence >= $faceConfidenceThreshold + 20) {
+            $securityIssues[] = 'sudden_improvement_suspicious';
+            error_log("Security: Sudden confidence improvement after failures for user {$user['id']}");
+        }
+    }
+    
+    // 4. GPS sanity check - can't be too far from last known position in short time
+    if (count($recentAttempts) > 0) {
+        $lastAttempt = $recentAttempts[0];
+        $lastLat = isset($data['last_latitude']) ? (float)$data['last_latitude'] : null;
+        $lastLon = isset($data['last_longitude']) ? (float)$data['last_longitude'] : null;
+        
+        // If we have previous GPS data, check for impossibly fast movement
+        // (teleportation attack detection)
+        // Note: This would require storing GPS in the attempts, skipping for now
+    }
+    
+    // 5. Liveness verification data (if provided by enhanced client)
+    $livenessData = $data['liveness_data'] ?? null;
+    if ($livenessData !== null) {
+        // Client provided liveness challenge completion data
+        $challengesPassed = (int)($livenessData['challenges_passed'] ?? 0);
+        $challengesRequired = (int)($livenessData['challenges_required'] ?? 2);
+        $challengeHash = $livenessData['challenge_hash'] ?? null;
+        
+        if ($challengesPassed < $challengesRequired) {
+            $securityIssues[] = 'incomplete_liveness_challenges';
+        }
+    }
+    
+    // Log all security issues for monitoring
+    if (!empty($securityIssues)) {
+        error_log("Face verification security issues for user {$user['id']}: " . implode(', ', $securityIssues));
+    }
 
     // Get student profile
     $student = new Student($db);
@@ -155,10 +249,18 @@ try {
     // Verify GPS and Face
     $gpsValid = $distance <= $gpsProximityRadius;
     $faceValid = $data['face_confidence'] >= $faceConfidenceThreshold;
+    
+    // Flag suspicious attempts (from security checks above)
+    $isSuspicious = !empty($securityIssues);
+    $requiresReview = in_array('perfect_score_suspicious', $securityIssues) || 
+                      in_array('identical_confidence_pattern', $securityIssues);
 
     // Determine verification status
     if ($isLate) {
         $verificationStatus = 'late';
+    } elseif ($isSuspicious && $requiresReview) {
+        // Don't outright reject but flag for review
+        $verificationStatus = $gpsValid && $faceValid ? 'pending_review' : ($gpsValid ? 'face_failed' : 'gps_failed');
     } elseif ($gpsValid && $faceValid) {
         $verificationStatus = 'success';
     } elseif (!$gpsValid && !$faceValid) {
@@ -169,14 +271,18 @@ try {
         $verificationStatus = 'face_failed';
     }
 
-    // Save response
+    // Save response with security flags
+    $securityFlags = !empty($securityIssues) ? json_encode($securityIssues) : null;
+    
     $insertQuery = "INSERT INTO attendance_check_responses 
                     (check_point_id, student_id, schedule_id, session_id, 
                      student_latitude, student_longitude, teacher_latitude, teacher_longitude,
-                     distance_meters, face_confidence_score, verification_status, device_info)
+                     distance_meters, face_confidence_score, verification_status, device_info,
+                     is_suspicious, security_flags)
                     VALUES (:check_point_id, :student_id, :schedule_id, :session_id,
                             :student_lat, :student_lon, :teacher_lat, :teacher_lon,
-                            :distance, :face_confidence, :verification_status, :device_info)";
+                            :distance, :face_confidence, :verification_status, :device_info,
+                            :is_suspicious, :security_flags)";
     $stmt = $db->prepare($insertQuery);
     $stmt->bindParam(':check_point_id', $data['check_point_id']);
     $stmt->bindParam(':student_id', $studentData['id']);
@@ -191,6 +297,8 @@ try {
     $stmt->bindParam(':verification_status', $verificationStatus);
     $deviceInfo = $data['device_info'] ?? null;
     $stmt->bindParam(':device_info', $deviceInfo);
+    $stmt->bindParam(':is_suspicious', $isSuspicious, PDO::PARAM_BOOL);
+    $stmt->bindParam(':security_flags', $securityFlags);
     $stmt->execute();
 
     $responseId = $db->lastInsertId();
