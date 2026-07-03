@@ -1,7 +1,9 @@
 <?php
 /**
  * Admin Attendance Settings API
- * Configure multi-check attendance and continuous monitoring
+ * Configure multi-check attendance and face verification
+ * 
+ * SIMPLIFIED: Removed unused continuous monitoring settings
  */
 
 header('Content-Type: application/json');
@@ -36,7 +38,8 @@ try {
         $settings = [];
         
         $query = "SELECT `key`, value FROM system_settings 
-                  WHERE `key` LIKE 'attendance_%' OR `key` LIKE 'continuous_%'
+                  WHERE `key` LIKE 'attendance_%' 
+                     OR `key` IN ('liveness_detection_enabled', 'face_confidence_threshold', 'gps_proximity_radius')
                   ORDER BY `key`";
         $stmt = $db->query($query);
         
@@ -44,22 +47,23 @@ try {
             $settings[$row['key']] = $row['value'];
         }
         
-        // Default values if not set
+        // Default values - SIMPLIFIED (removed unused continuous_* settings)
         $defaults = [
+            // Multi-check attendance settings
             'attendance_multi_check_enabled' => 'true',
             'attendance_default_total_checks' => '3',
-            'attendance_auto_schedule_enabled' => 'true',
-            'attendance_first_check_delay' => '20',
-            'attendance_min_check_interval' => '15',
-            'attendance_max_check_interval' => '30',
-            'attendance_check_window_minutes' => '5',
-            'continuous_monitoring_enabled' => 'true',
-            'continuous_monitoring_required' => 'false',
-            'continuous_auto_response_enabled' => 'true',
-            'continuous_face_detection_interval' => '30',
+            'attendance_min_check_interval' => '10',
+            'attendance_max_check_interval' => '25',
+            'attendance_check_window_minutes' => '3',
+            'attendance_hide_timing_from_students' => 'true',
+            'attendance_auto_trigger_enabled' => 'true',
+            
+            // Face verification settings (security-critical)
             'liveness_detection_enabled' => 'true',
-            'liveness_min_score' => '60',
-            'face_confidence_threshold' => '75'
+            'face_confidence_threshold' => '75',
+            
+            // GPS settings
+            'gps_proximity_radius' => '50'
         ];
         
         foreach ($defaults as $key => $value) {
@@ -78,22 +82,23 @@ try {
             Response::error('No settings provided', 400);
         }
         
-        // Valid setting keys
+        // Valid setting keys - SIMPLIFIED
         $validKeys = [
+            // Multi-check attendance
             'attendance_multi_check_enabled',
             'attendance_default_total_checks',
-            'attendance_auto_schedule_enabled',
-            'attendance_first_check_delay',
             'attendance_min_check_interval',
             'attendance_max_check_interval',
             'attendance_check_window_minutes',
-            'continuous_monitoring_enabled',
-            'continuous_monitoring_required',
-            'continuous_auto_response_enabled',
-            'continuous_face_detection_interval',
+            'attendance_hide_timing_from_students',
+            'attendance_auto_trigger_enabled',
+            
+            // Face verification
             'liveness_detection_enabled',
-            'liveness_min_score',
-            'face_confidence_threshold'
+            'face_confidence_threshold',
+            
+            // GPS
+            'gps_proximity_radius'
         ];
         
         $updated = 0;
