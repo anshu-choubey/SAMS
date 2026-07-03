@@ -62,6 +62,7 @@ try {
     $now = date('Y-m-d H:i:s');
     
     // Find and activate due scheduled checks
+    // Removed auto_trigger_checks requirement — always activate due checks
     $dueQuery = "SELECT acp.id, acp.session_id, acp.check_number
                  FROM attendance_check_points acp
                  JOIN teacher_locations tl ON acp.session_id = tl.id
@@ -71,7 +72,6 @@ try {
                  AND acp.scheduled_time <= :now
                  AND acp.window_end_time > :now2
                  AND tl.is_active = TRUE
-                 AND tl.auto_trigger_checks = TRUE
                  LIMIT 10";
     
     $stmt = $db->prepare($dueQuery);

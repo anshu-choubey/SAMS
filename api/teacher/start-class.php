@@ -257,10 +257,11 @@ try {
     
     $notes = $data['notes'] ?? null;
 
-    // Generate first check time (random interval from class start)
+    // Generate first check time
+    // First check should appear within 1-3 minutes so students don't wait too long
     $firstCheckMinutes = $randomIntervalsEnabled 
-        ? rand($minIntervalMinutes, $maxIntervalMinutes)
-        : $firstCheckDelay;
+        ? rand(1, min(3, $minIntervalMinutes))
+        : max(1, $firstCheckDelay);
     $nextCheckTime = date('Y-m-d H:i:s', strtotime("+{$firstCheckMinutes} minutes"));
     
     // Start class session - insert into teacher_locations with random interval config
@@ -315,10 +316,10 @@ try {
         
         for ($i = 0; $i < $totalChecksPlanned; $i++) {
             if ($i == 0) {
-                // First check: random between min and max interval from start
+                // First check: appear quickly (1-3 min) so student doesn't wait too long
                 $checkMinutes = $randomIntervalsEnabled 
-                    ? rand($minIntervalMinutes, $maxIntervalMinutes)
-                    : $firstCheckDelay;
+                    ? rand(1, min(3, $minIntervalMinutes))
+                    : max(1, $firstCheckDelay);
             } else {
                 // Subsequent checks: random interval from last check
                 $lastCheckMinutes = end($scheduledIntervals);
