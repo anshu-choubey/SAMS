@@ -1,9 +1,7 @@
 <?php
 /**
  * Admin Attendance Settings API
- * Configure multi-check attendance and face verification
- * 
- * SIMPLIFIED: Removed unused continuous monitoring settings
+ * Configure attendance checks, face verification, and GPS
  */
 
 header('Content-Type: application/json');
@@ -14,149 +12,74 @@ require_once __DIR__ . '/../../includes/middleware/CORS.php';
 require_once __DIR__ . '/../../includes/middleware/Auth.php';
 require_once __DIR__ . '/../../includes/helpers/Response.php';
 
-// Handle CORS
 CORS::handle();
 
 try {
-    // Check authentication and admin role
     $user = Auth::user();
-    
-    if (!$user) {
-        Response::unauthorized('Please login to continue');
-    }
-    
-    if ($user['role'] !== 'admin') {
-        Response::error('Access restricted to administrators only', 403);
-    }
+    if (!$user) { Response::unauthorized('Please login to continue'); }
+    if ($user['role'] !== 'admin') { Response::error('Access restricted to administrators only', 403); }
 
-    // Get database connection
     $database = new Database();
     $db = $database->getConnection();
 
+    $settingsConfig = [
+        'attendance_multi_check_enabled'    => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable multi-check attendance'],
+        'attendance_default_total_checks'   => ['type' => 'integer', 'default' => '2',     'label' => 'Number of checks per class'],
+        'attendance_random_intervals_enabled' => ['type' => 'boolean', 'default' => 'true', 'label' => 'Random interval timing'],
+        'attendance_min_check_interval'     => ['type' => 'integer', 'default' => '10',    'label' => 'Min minutes between checks'],
+        'attendance_max_check_interval'     => ['type' => 'integer', 'default' => '25',    'label' => 'Max minutes between checks'],
+        'attendance_check_window_minutes'   => ['type' => 'integer', 'default' => '3',     'label' => 'Response window (minutes)'],
+        'attendance_hide_timing_from_students' => ['type' => 'boolean', 'default' => 'true', 'label' => 'Hide check times from students'],
+        'face_confidence_threshold'         => ['type' => 'integer', 'default' => '75',    'label' => 'Face match % required'],
+        'liveness_detection_enabled'        => ['type' => 'boolean', 'default' => 'true',  'label' => 'Enable liveness detection'],
+        'gps_proximity_radius'              => ['type' => 'integer', 'default' => '50',    'label' => 'GPS radius (meters)'],
+    ];
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        // Get current settings
-        $settings = [];
+        $keys = array_keys($settingsConfig);
+        $placeholders = implode(',', array_fill(0, count($keys), '?'));
+        $stmt = $db->prepare("SELECT `key`, value FROM system_settings WHERE `key` IN ($placeholders)");
+        $stmt->execute($keys);
         
-        $query = "SELECT `key`, value FROM system_settings 
-                  WHERE `key` LIKE 'attendance_%' 
-                     OR `key` IN ('liveness_detection_enabled', 'face_confidence_threshold', 'gps_proximity_radius')
-                  ORDER BY `key`";
-        $stmt = $db->query($query);
-        
+        $dbValues = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $settings[$row['key']] = $row['value'];
+            $dbValues[$row['key']] = $row['value'];
         }
         
-        $defaults = [
-            // Multi-check attendance settings
-            'attendance_multi_check_enabled' => 'true',
-            'attendance_default_total_checks' => '3',
-            'attendance_random_intervals_enabled' => 'true',
-            'attendance_min_check_interval' => '10',
-            'attendance_max_check_interval' => '25',
-            'attendance_first_check_delay' => '10',
-            'attendance_check_window_minutes' => '3',
-            'attendance_hide_timing_from_students' => 'true',
-            'attendance_auto_trigger_enabled' => 'true',
-            'attendance_auto_schedule_enabled' => 'true',
-            'attendance_response_window_minutes' => '3',
-            
-            // Face verification settings
-            'liveness_detection_enabled' => 'true',
-            'face_confidence_threshold' => '75',
-            
-            // GPS settings
-            'gps_proximity_radius' => '50'
-        ];
-        
-        foreach ($defaults as $key => $value) {
-            if (!isset($settings[$key])) {
-                $settings[$key] = $value;
-            }
+        $settings = [];
+        foreach ($settingsConfig as $key => $config) {
+            $settings[$key] = [
+                'value' => $dbValues[$key] ?? $config['default'],
+                'label' => $config['label'],
+                'type'  => $config['type']
+            ];
         }
         
         Response::success($settings, 'Settings retrieved successfully');
         
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT') {
-        // Update settings
         $data = json_decode(file_get_contents('php://input'), true);
-        
-        if (empty($data)) {
-            Response::error('No settings provided', 400);
-        }
-        
-        $validKeys = [
-            // Multi-check attendance
-            'attendance_multi_check_enabled',
-            'attendance_default_total_checks',
-            'attendance_random_intervals_enabled',
-            'attendance_min_check_interval',
-            'attendance_max_check_interval',
-            'attendance_first_check_delay',
-            'attendance_check_window_minutes',
-            'attendance_hide_timing_from_students',
-            'attendance_auto_trigger_enabled',
-            'attendance_auto_schedule_enabled',
-            'attendance_response_window_minutes',
-            
-            // Face verification
-            'liveness_detection_enabled',
-            'face_confidence_threshold',
-            
-            // GPS
-            'gps_proximity_radius'
-        ];
-        
-        $booleanKeys = [
-            'attendance_multi_check_enabled', 'attendance_random_intervals_enabled',
-            'attendance_hide_timing_from_students', 'attendance_auto_trigger_enabled',
-            'attendance_auto_schedule_enabled', 'liveness_detection_enabled'
-        ];
-        $integerKeys = [
-            'attendance_default_total_checks', 'attendance_min_check_interval',
-            'attendance_max_check_interval', 'attendance_first_check_delay',
-            'attendance_check_window_minutes', 'attendance_response_window_minutes',
-            'face_confidence_threshold', 'gps_proximity_radius'
-        ];
+        if (empty($data)) { Response::error('No settings provided', 400); }
         
         $updated = 0;
-        
         foreach ($data as $key => $value) {
-            if (!in_array($key, $validKeys)) {
-                continue;
-            }
+            if (!isset($settingsConfig[$key])) { continue; }
             
-            $type = in_array($key, $booleanKeys) ? 'boolean' : (in_array($key, $integerKeys) ? 'integer' : 'string');
+            $type = $settingsConfig[$key]['type'];
             
-            $checkQuery = "SELECT id FROM system_settings WHERE `key` = :key";
-            $stmt = $db->prepare($checkQuery);
-            $stmt->bindParam(':key', $key);
-            $stmt->execute();
+            $stmt = $db->prepare("SELECT id FROM system_settings WHERE `key` = :key");
+            $stmt->execute([':key' => $key]);
             
             if ($stmt->fetch()) {
-                $updateQuery = "UPDATE system_settings SET value = :value, type = :type WHERE `key` = :key";
-                $stmt = $db->prepare($updateQuery);
-                $stmt->bindParam(':value', $value);
-                $stmt->bindParam(':type', $type);
-                $stmt->bindParam(':key', $key);
-                $stmt->execute();
+                $stmt = $db->prepare("UPDATE system_settings SET value = :value, type = :type WHERE `key` = :key");
             } else {
-                $insertQuery = "INSERT INTO system_settings (`key`, value, type) VALUES (:key, :value, :type)";
-                $stmt = $db->prepare($insertQuery);
-                $stmt->bindParam(':key', $key);
-                $stmt->bindParam(':value', $value);
-                $stmt->bindParam(':type', $type);
-                $stmt->execute();
+                $stmt = $db->prepare("INSERT INTO system_settings (`key`, value, type) VALUES (:key, :value, :type)");
             }
-            
+            $stmt->execute([':key' => $key, ':value' => $value, ':type' => $type]);
             $updated++;
         }
         
-        Response::success([
-            'updated_count' => $updated,
-            'settings' => $data
-        ], "Successfully updated $updated settings");
-        
+        Response::success(['updated_count' => $updated], "Updated $updated settings");
     } else {
         http_response_code(405);
         echo json_encode(['success' => false, 'message' => 'Method not allowed']);
@@ -165,9 +88,6 @@ try {
 } catch (Exception $e) {
     error_log('Attendance settings error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Server error: ' . $e->getMessage()
-    ]);
+    echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
 }
 ?>
