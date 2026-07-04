@@ -177,11 +177,12 @@ if ($db) {
                                 <th>Sent</th>
                                 <th>Read</th>
                                 <th>Date</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recentNotifications as $notif): ?>
-                            <tr>
+                            <tr id="notif-row-<?php echo (int)$notif['id']; ?>">
                                 <td><span class="badge bg-info" style="font-size: 11px;"><?php echo ucwords(str_replace('_', ' ', htmlspecialchars($notif['notification_type']))); ?></span></td>
                                 <td><?php echo htmlspecialchars($notif['target_name'] ?? 'All Users'); ?></td>
                                 <td><?php echo htmlspecialchars(substr($notif['title'], 0, 50)); ?></td>
@@ -189,6 +190,7 @@ if ($db) {
                                 <td><span class="badge bg-<?php echo !empty($notif['is_sent']) ? 'success' : 'secondary'; ?>"><?php echo !empty($notif['is_sent']) ? '✓ Sent' : 'Pending'; ?></span></td>
                                 <td><span class="badge bg-<?php echo !empty($notif['is_read']) ? 'primary' : 'warning'; ?>"><?php echo !empty($notif['is_read']) ? '✓ Read' : 'Unread'; ?></span></td>
                                 <td><small class="text-muted"><?php echo date('M d, H:i', strtotime($notif['created_at'])); ?></small></td>
+                                <td><button class="btn btn-sm btn-danger" onclick="deleteNotification(<?php echo (int)$notif['id']; ?>)" title="Delete"><i class="bi bi-trash"></i></button></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -220,6 +222,26 @@ if ($db) {
                     select.appendChild(opt.cloneNode(true));
                 }
             });
+        }
+
+        async function deleteNotification(id) {
+            if (!confirm('Delete this notification?')) return;
+            try {
+                const res = await fetch('/api/notifications/delete.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    const row = document.getElementById('notif-row-' + id);
+                    if (row) row.remove();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to delete'));
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
         }
 
         function updateMessagePreview() {
