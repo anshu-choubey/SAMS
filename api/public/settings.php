@@ -31,7 +31,7 @@ try {
             case 'attendance':
                 $settings = [
                     'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
-                    'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
+                    'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 60),
                     'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
                     'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                     'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 2),
@@ -73,7 +73,7 @@ try {
                 $config = [
                     'attendance' => [
                         'gps_proximity_radius' => getSetting($db, 'gps_proximity_radius', 50),
-                        'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 75),
+                        'face_confidence_threshold' => getSetting($db, 'face_confidence_threshold', 60),
                         'enableLivenessDetection' => getSetting($db, 'liveness_detection_enabled', true),
                         'multi_check_enabled' => getSetting($db, 'attendance_multi_check_enabled', true),
                         'default_total_checks' => getSetting($db, 'attendance_default_total_checks', 2),
