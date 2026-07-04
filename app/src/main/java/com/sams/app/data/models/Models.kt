@@ -752,7 +752,7 @@ data class AppSettingsConfig(
 @Serializable
 data class AttendanceSettings(
     @SerialName("gps_proximity_radius") val gpsProximityRadius: Int = 50,
-    @SerialName("face_confidence_threshold") val faceConfidenceThreshold: Int = 75,
+    @SerialName("face_confidence_threshold") val faceConfidenceThreshold: Int = 60,
     @SerialName("enableLivenessDetection") val enableLivenessDetection: Boolean = true,
     @SerialName("multi_check_enabled") val multiCheckEnabled: Boolean = true,
     @SerialName("default_total_checks") val defaultTotalChecks: Int = 2,

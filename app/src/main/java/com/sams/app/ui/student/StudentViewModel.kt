@@ -117,7 +117,7 @@ class StudentViewModel @Inject constructor(
 
     fun getGpsRadius(): Int = _appSettings.value?.attendance?.gpsProximityRadius ?: 50
 
-    fun getFaceConfidenceThreshold(): Int = _appSettings.value?.attendance?.faceConfidenceThreshold ?: 75
+    fun getFaceConfidenceThreshold(): Int = _appSettings.value?.attendance?.faceConfidenceThreshold ?: 60
 
     fun getAttendanceThreshold(): Int = 75
 
