@@ -98,9 +98,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("com.google.android.gms:play-services-mlkit-face-detection:17.1.0")
 
-    // ML Kit Face Detection + Face Mesh (3D anti-spoofing)
+    // ML Kit Face Detection
     implementation("com.google.mlkit:face-detection:16.1.7")
-    implementation("com.google.mlkit:face-mesh-detection:16.0.0-beta3")
     implementation("androidx.camera:camera-mlkit-vision:1.4.0")
 
     // Google Play Services Location

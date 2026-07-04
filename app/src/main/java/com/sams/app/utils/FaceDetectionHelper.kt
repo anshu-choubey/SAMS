@@ -3,7 +3,6 @@ package com.sams.app.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.ImageFormat
 import android.graphics.Matrix
 import android.graphics.Rect
@@ -16,10 +15,6 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetector
 import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.face.FaceLandmark
-import com.google.mlkit.vision.facemesh.FaceMesh
-import com.google.mlkit.vision.facemesh.FaceMeshDetection
-import com.google.mlkit.vision.facemesh.FaceMeshDetector
-import com.google.mlkit.vision.facemesh.FaceMeshDetectorOptions
 import kotlinx.coroutines.tasks.await
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
@@ -43,33 +38,22 @@ class FaceDetectionHelper(private val context: Context) {
         private const val FACE_PAD_RATIO = 1.3f
         private const val MIN_FACE_DIMENSION = 20
 
-        private const val BLINK_CLOSE_THRESHOLD = 0.22f
-        private const val BLINK_OPEN_THRESHOLD = 0.55f
-        private const val HEAD_TURN_THRESHOLD = 20f
-        private const val HEAD_CENTER_THRESHOLD = 8f
-        private const val FACE_AREA_MIN = 12000
+        private const val BLINK_CLOSE_THRESHOLD = 0.25f
+        private const val BLINK_OPEN_THRESHOLD = 0.50f
+        private const val HEAD_TURN_THRESHOLD = 18f
+        private const val HEAD_CENTER_THRESHOLD = 10f
+        private const val FACE_AREA_MIN = 10000
         private const val FACE_AREA_MAX = 600000
-        private const val CHALLENGE_TIMEOUT_MS = 15000L
+        private const val CHALLENGE_TIMEOUT_MS = 12000L
 
-        private const val REQUIRED_MATCH_FRAMES = 5
-        private const val MAX_CONFIDENCE_JUMP = 12.0
-        private const val MIN_IDENTITY_MATCH = 60.0
-        private const val MAX_IDENTITY_FAILS = 2
+        private const val REQUIRED_MATCH_FRAMES = 3
+        private const val MAX_CONFIDENCE_JUMP = 15.0
+        private const val MIN_IDENTITY_MATCH = 55.0
+        private const val MAX_IDENTITY_FAILS = 3
 
-        // Anti-spoofing thresholds
-        private const val DEPTH_VARIANCE_THRESHOLD = 1.0f
-        private const val TEXTURE_SHARPNESS_MIN = 12.0
-        private const val TEXTURE_SHARPNESS_MAX = 900.0
-        private const val MOTION_HISTORY_SIZE = 12
-        private const val MIN_MOTION_VARIANCE = 0.2f
-        private const val SPOOF_CHECK_INTERVAL = 1
-        private const val SCREEN_BLUE_RATIO_MAX = 0.42f
-        private const val MIN_SPOOF_PASS_STREAK = 5
-
-        // Embedding consistency
-        private const val EMBEDDING_HISTORY_SIZE = 8
-        private const val MIN_EMBEDDING_CONSISTENCY = 0.55
-        private const val PRE_LIVENESS_IDENTITY_FRAMES = 3
+        private const val EMBEDDING_HISTORY_SIZE = 5
+        private const val MIN_EMBEDDING_CONSISTENCY = 0.50
+        private const val PRE_LIVENESS_IDENTITY_FRAMES = 2
     }
 
     private val detector: FaceDetector = FaceDetection.getClient(
@@ -80,12 +64,6 @@ class FaceDetectionHelper(private val context: Context) {
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .setMinFaceSize(0.2f)
             .enableTracking()
-            .build()
-    )
-
-    private val meshDetector: FaceMeshDetector = FaceMeshDetection.getClient(
-        FaceMeshDetectorOptions.Builder()
-            .setUseCase(FaceMeshDetectorOptions.FACE_MESH)
             .build()
     )
 
@@ -107,64 +85,42 @@ class FaceDetectionHelper(private val context: Context) {
         val blinkPhase: BlinkPhase = BlinkPhase.WAITING_CLOSE,
         val blinkCloseTime: Long = 0L,
         val turnDetected: Boolean = false,
-        val allPassed: Boolean = false,
-        val identityFailCount: Int = 0
+        val allPassed: Boolean = false
     ) {
-        val currentChallenge: Challenge? get() =
-            if (currentIndex < challenges.size) challenges[currentIndex] else null
-        val progress: Float get() =
-            if (challenges.isEmpty()) 1f else currentIndex.toFloat() / challenges.size
+        val currentChallenge: Challenge?
+            get() = if (currentIndex < challenges.size) challenges[currentIndex] else null
+        val progress: Float
+            get() = if (challenges.isEmpty()) 1f else currentIndex.toFloat() / challenges.size
     }
 
     private var livenessState: LivenessState? = null
     private var postLivenessMatchCount = 0
-    private var lastMatchConfidence: Double? = null
+    private var lastMatchConfidence = 0.0
     private var identityFailStreak = 0
 
-    // Anti-spoofing state
-    private var frameCount = 0
-    private var spoofDetected = false
-    private var spoofReason = ""
-    private val motionHistory = ArrayDeque<Pair<Float, Float>>(MOTION_HISTORY_SIZE + 1)
-    private var lastDepthVariance = 0f
-    private var depthPassCount = 0
-    private val depthHistory = ArrayDeque<Float>(10)
-    private var spoofPassStreak = 0
-    private var totalSpoofPasses = 0
-
-    // Embedding consistency tracking — detect face swaps between frames
     private val recentEmbeddings = ArrayDeque<FloatArray>(EMBEDDING_HISTORY_SIZE + 1)
     private var preLivenessIdentityCount = 0
     private var identityLocked = false
 
     fun startLivenessChallenge() {
-        val selected = listOf(Challenge.BLINK, Challenge.TURN_LEFT, Challenge.TURN_RIGHT)
-            .shuffled().take(2)
-        livenessState = LivenessState(challenges = selected)
+        val challenge = listOf(Challenge.BLINK, Challenge.TURN_LEFT, Challenge.TURN_RIGHT).random()
+        livenessState = LivenessState(challenges = listOf(challenge))
         postLivenessMatchCount = 0
         lastMatchConfidence = 0.0
-        frameCount = 0
-        spoofDetected = false
-        spoofReason = ""
-        motionHistory.clear()
-        depthHistory.clear()
-        depthPassCount = 0
-        spoofPassStreak = 0
-        totalSpoofPasses = 0
         recentEmbeddings.clear()
         preLivenessIdentityCount = 0
         identityLocked = false
-        Timber.tag(TAG).d("Liveness challenges: $selected")
+        Timber.tag(TAG).d("Liveness challenge: $challenge")
     }
 
     fun getLivenessInstruction(): String {
         val state = livenessState ?: return "Initializing..."
         if (state.allPassed) return "Hold steady..."
-        val ch = state.currentChallenge ?: return "Hold steady..."
-        return when (ch) {
-            Challenge.BLINK -> "Blink your eyes naturally"
-            Challenge.TURN_LEFT -> "Slowly turn head left"
-            Challenge.TURN_RIGHT -> "Slowly turn head right"
+        return when (state.currentChallenge) {
+            Challenge.BLINK -> "Blink your eyes"
+            Challenge.TURN_LEFT -> "Turn head left"
+            Challenge.TURN_RIGHT -> "Turn head right"
+            null -> "Hold steady..."
         }
     }
 
@@ -183,312 +139,6 @@ class FaceDetectionHelper(private val context: Context) {
             Timber.tag(TAG).e("detectFaces error: ${e.message}")
             emptyList()
         }
-    }
-
-    // ── 3D Mesh Anti-Spoofing ───────────────────────────────────────────────────
-
-    data class SpoofResult(val isReal: Boolean, val confidence: Float, val reason: String)
-
-    private suspend fun checkAntiSpoofing(bitmap: Bitmap, face: Face): SpoofResult {
-        val checks = mutableListOf<Pair<String, Boolean>>()
-        var overallScore = 0f
-
-        // Check 1: 3D Depth analysis via Face Mesh
-        try {
-            val meshes = meshDetector.process(InputImage.fromBitmap(bitmap, 0)).await()
-            if (meshes.isNotEmpty()) {
-                val mesh = meshes[0]
-                val depthResult = analyzeDepth(mesh)
-                checks.add("depth" to depthResult.first)
-                if (depthResult.first) overallScore += 25f
-                lastDepthVariance = depthResult.second
-                depthHistory.addLast(depthResult.second)
-                if (depthHistory.size > 8) depthHistory.removeFirst()
-                if (depthResult.first) depthPassCount++
-            }
-        } catch (e: Exception) {
-            Timber.tag(TAG).w("Mesh detection error: ${e.message}")
-        }
-
-        // Check 2: Texture sharpness (detect photo/screen artifacts)
-        val textureResult = analyzeTexture(face, bitmap)
-        checks.add("texture" to textureResult.first)
-        if (textureResult.first) overallScore += 20f
-
-        // Check 3: Screen color detection (screens emit blue-heavy light)
-        val screenResult = detectScreenColors(face, bitmap)
-        checks.add("screen" to !screenResult.first)
-        if (!screenResult.first) overallScore += 25f
-
-        // Check 4: Micro-motion analysis
-        val box = face.boundingBox
-        val centerX = (box.left + box.right) / 2f
-        val centerY = (box.top + box.bottom) / 2f
-        motionHistory.addLast(centerX to centerY)
-        if (motionHistory.size > MOTION_HISTORY_SIZE) motionHistory.removeFirst()
-        val motionResult = analyzeMotion()
-        checks.add("motion" to motionResult.first)
-        if (motionResult.first) overallScore += 15f
-
-        // Check 5: Eye reflection / naturalness
-        val eyeResult = analyzeEyeNaturalness(face)
-        checks.add("eyes" to eyeResult)
-        if (eyeResult) overallScore += 15f
-
-        val failedChecks = checks.filter { !it.second }.map { it.first }
-
-        // Depth is MANDATORY after enough frames to collect data (frame 4+)
-        val depthPassed = checks.find { it.first == "depth" }?.second ?: false
-        val screenPassed = checks.find { it.first == "screen" }?.second ?: true
-
-        val passed = when {
-            frameCount > 4 && !depthPassed -> false
-            !screenPassed -> false
-            else -> overallScore >= 55f
-        }
-
-        val reason = if (passed) "Real face" else "Spoof: ${failedChecks.joinToString(", ")}"
-
-        return SpoofResult(passed, overallScore, reason)
-    }
-
-    /**
-     * Analyze z-depth variance from 468 3D face mesh landmarks.
-     * Real faces have significant depth variation (nose protrudes, ears recede).
-     * Photos are flat — z-values are nearly uniform.
-     */
-    private fun analyzeDepth(mesh: FaceMesh): Pair<Boolean, Float> {
-        val points = mesh.allPoints
-        if (points.size < 100) return false to 0f
-
-        val zValues = points.map { it.position.z }
-        val mean = zValues.average().toFloat()
-        val variance = zValues.map { (it - mean) * (it - mean) }.average().toFloat()
-        val stdDev = sqrt(variance.toDouble()).toFloat()
-
-        // Nose tip region (indices ~1-4) vs ear region (indices ~234, ~454)
-        val noseTipZ = points.filter { it.index in listOf(1, 2, 3, 4, 5, 6) }
-            .map { it.position.z }.average().toFloat()
-        val sideZ = points.filter { it.index in listOf(234, 454, 127, 356, 93, 323) }
-            .map { it.position.z }.average().toFloat()
-        val noseToSideDepth = abs(noseTipZ - sideZ)
-
-        Timber.tag(TAG).d("Depth: stdDev=%.2f, noseToSide=%.2f, variance=%.4f", stdDev, noseToSideDepth, variance)
-
-        val isReal = stdDev > DEPTH_VARIANCE_THRESHOLD && noseToSideDepth > 0.5f
-        return isReal to stdDev
-    }
-
-    /**
-     * Analyze texture sharpness of the face crop using Laplacian variance.
-     * Real skin: moderate variance (natural texture).
-     * Blurry photo: very low variance.
-     * Screen (sharp pixels): very high variance or moiré artifacts.
-     */
-    private fun analyzeTexture(face: Face, bitmap: Bitmap): Pair<Boolean, Double> {
-        return try {
-            val box = face.boundingBox
-            val left = maxOf(0, box.left)
-            val top = maxOf(0, box.top)
-            val width = minOf(bitmap.width - left, box.width())
-            val height = minOf(bitmap.height - top, box.height())
-            if (width < 30 || height < 30) return false to 0.0
-
-            val faceCrop = Bitmap.createBitmap(bitmap, left, top, width, height)
-            val small = faceCrop.scale(64, 64)
-            faceCrop.recycle()
-
-            val laplacianVar = computeLaplacianVariance(small)
-            small.recycle()
-
-            Timber.tag(TAG).d("Texture sharpness: %.2f", laplacianVar)
-
-            val isNatural = laplacianVar in TEXTURE_SHARPNESS_MIN..TEXTURE_SHARPNESS_MAX
-            isNatural to laplacianVar
-        } catch (e: Exception) {
-            Timber.tag(TAG).w("Texture analysis error: ${e.message}")
-            true to 50.0
-        }
-    }
-
-    private fun computeLaplacianVariance(bitmap: Bitmap): Double {
-        val w = bitmap.width
-        val h = bitmap.height
-        val pixels = IntArray(w * h)
-        bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
-
-        val gray = DoubleArray(w * h)
-        for (i in pixels.indices) {
-            val r = (pixels[i] shr 16) and 0xff
-            val g = (pixels[i] shr 8) and 0xff
-            val b = pixels[i] and 0xff
-            gray[i] = 0.299 * r + 0.587 * g + 0.114 * b
-        }
-
-        // Laplacian kernel: [0,1,0; 1,-4,1; 0,1,0]
-        var sum = 0.0
-        var sumSq = 0.0
-        var count = 0
-        for (y in 1 until h - 1) {
-            for (x in 1 until w - 1) {
-                val lap = -4 * gray[y * w + x] +
-                        gray[(y - 1) * w + x] +
-                        gray[(y + 1) * w + x] +
-                        gray[y * w + (x - 1)] +
-                        gray[y * w + (x + 1)]
-                sum += lap
-                sumSq += lap * lap
-                count++
-            }
-        }
-        if (count == 0) return 0.0
-        val mean = sum / count
-        return (sumSq / count) - (mean * mean)
-    }
-
-    /**
-     * Detect if face is on a screen by analyzing color channel distribution.
-     * Screens emit light with a blue-heavy color temperature.
-     * Also checks for unnaturally uniform brightness (backlit screen).
-     * Returns (isScreen, blueRatio).
-     */
-    private fun detectScreenColors(face: Face, bitmap: Bitmap): Pair<Boolean, Float> {
-        return try {
-            val box = face.boundingBox
-            val left = maxOf(0, box.left)
-            val top = maxOf(0, box.top)
-            val width = minOf(bitmap.width - left, box.width())
-            val height = minOf(bitmap.height - top, box.height())
-            if (width < 20 || height < 20) return false to 0f
-
-            val faceCrop = Bitmap.createBitmap(bitmap, left, top, width, height)
-            val small = faceCrop.scale(32, 32)
-            faceCrop.recycle()
-
-            val pixels = IntArray(32 * 32)
-            small.getPixels(pixels, 0, 32, 0, 0, 32, 32)
-            small.recycle()
-
-            var totalR = 0L; var totalG = 0L; var totalB = 0L
-            var brightnessValues = mutableListOf<Int>()
-
-            for (pixel in pixels) {
-                val r = (pixel shr 16) and 0xff
-                val g = (pixel shr 8) and 0xff
-                val b = pixel and 0xff
-                totalR += r; totalG += g; totalB += b
-                brightnessValues.add((r + g + b) / 3)
-            }
-
-            val total = (totalR + totalG + totalB).toFloat()
-            if (total < 1f) return false to 0f
-
-            val blueRatio = totalB.toFloat() / total
-            val greenRatio = totalG.toFloat() / total
-
-            // Screen detection: blue-heavy color + very uniform brightness
-            val meanBrightness = brightnessValues.average()
-            val brightnessVar = brightnessValues.map { (it - meanBrightness) * (it - meanBrightness) }.average()
-            val brightnessStdDev = sqrt(brightnessVar).toFloat()
-
-            // Screens have high blue ratio and more uniform brightness
-            val isScreen = blueRatio > SCREEN_BLUE_RATIO_MAX ||
-                    (blueRatio > 0.37f && brightnessStdDev < 30f) ||
-                    (brightnessStdDev < 15f && meanBrightness > 100)
-
-            Timber.tag(TAG).d("Screen check: blueRatio=%.3f, brightnessStdDev=%.1f, isScreen=%b",
-                blueRatio, brightnessStdDev, isScreen)
-
-            isScreen to blueRatio
-        } catch (e: Exception) {
-            Timber.tag(TAG).w("Screen color detection error: ${e.message}")
-            false to 0f
-        }
-    }
-
-    /**
-     * Track face center position across frames. Real faces have natural
-     * micro-movements (breathing, subtle sway) with variable velocity.
-     * Photos held by hand move more uniformly.
-     */
-    private fun analyzeMotion(): Pair<Boolean, Float> {
-        if (motionHistory.size < 8) return true to 0f // not enough data yet
-
-        val positions = motionHistory.toList()
-        val velocitiesX = mutableListOf<Float>()
-        val velocitiesY = mutableListOf<Float>()
-
-        for (i in 1 until positions.size) {
-            velocitiesX.add(positions[i].first - positions[i - 1].first)
-            velocitiesY.add(positions[i].second - positions[i - 1].second)
-        }
-
-        // Velocity variance — real faces have irregular micro-movements
-        val varX = computeVariance(velocitiesX)
-        val varY = computeVariance(velocitiesY)
-        val motionVariance = (varX + varY) / 2f
-
-        // Also check for total stillness (impossibly still = photo on stand)
-        val totalMovement = positions.zipWithNext().sumOf { (a, b) ->
-            sqrt(((a.first - b.first) * (a.first - b.first) +
-                    (a.second - b.second) * (a.second - b.second)).toDouble())
-        }.toFloat()
-
-        val avgMovement = totalMovement / positions.size
-
-        Timber.tag(TAG).d("Motion: variance=%.2f, avgMovement=%.2f", motionVariance, avgMovement)
-
-        // Too still is suspicious, but some natural stillness is OK
-        val isNatural = motionVariance > MIN_MOTION_VARIANCE || avgMovement > 1.0f
-        return isNatural to motionVariance
-    }
-
-    private fun computeVariance(values: List<Float>): Float {
-        if (values.isEmpty()) return 0f
-        val mean = values.average().toFloat()
-        return values.map { (it - mean) * (it - mean) }.average().toFloat()
-    }
-
-    /**
-     * Check that ALL recent embeddings are from the SAME face.
-     * If someone swaps a photo in mid-verification, the embeddings will diverge.
-     */
-    private fun checkEmbeddingConsistency(currentEmbedding: FloatArray): Boolean {
-        recentEmbeddings.addLast(currentEmbedding.copyOf())
-        if (recentEmbeddings.size > EMBEDDING_HISTORY_SIZE) recentEmbeddings.removeFirst()
-        if (recentEmbeddings.size < 3) return true
-
-        val embeddings = recentEmbeddings.toList()
-        for (i in 1 until embeddings.size) {
-            var dot = 0.0
-            for (j in embeddings[i].indices) {
-                dot += embeddings[i][j] * embeddings[i - 1][j]
-            }
-            if (dot < MIN_EMBEDDING_CONSISTENCY) {
-                Timber.tag(TAG).w("Embedding inconsistency: frame ${i-1}→$i cosine=%.3f (face swap?)", dot)
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
-     * Check eye naturalness — real eyes have varying open probability
-     * across frames, photos have fixed probability.
-     */
-    private fun analyzeEyeNaturalness(face: Face): Boolean {
-        val leftEye = face.leftEyeOpenProbability ?: return false
-        val rightEye = face.rightEyeOpenProbability ?: return false
-
-        // Both eyes must be detected with reasonable values
-        if (leftEye < 0.01f && rightEye < 0.01f) return false
-
-        // Eyes should be roughly symmetric (real faces)
-        val eyeDiff = abs(leftEye - rightEye)
-        if (eyeDiff > 0.5f) return false
-
-        // Face tracking ID must exist (proves continuous tracking)
-        return face.trackingId != null
     }
 
     // ── Embedding ───────────────────────────────────────────────────────────────
@@ -629,7 +279,7 @@ class FaceDetectionHelper(private val context: Context) {
                 face.getLandmark(FaceLandmark.RIGHT_EYE) != null &&
                 face.getLandmark(FaceLandmark.NOSE_BASE) != null
         val fc = face.getContour(FaceContour.FACE)
-        checks["contours"] = fc != null && fc.points.size >= 25
+        checks["contours"] = fc != null && fc.points.size >= 20
 
         return LivenessResult(
             isLive = checks.values.all { it },
@@ -644,7 +294,30 @@ class FaceDetectionHelper(private val context: Context) {
         )
     }
 
-    // ── Combined Verification with Anti-Spoofing ────────────────────────────────
+    /**
+     * Verify consecutive embeddings are from the same face.
+     * Catches mid-verification face swaps.
+     */
+    private fun checkEmbeddingConsistency(currentEmbedding: FloatArray): Boolean {
+        recentEmbeddings.addLast(currentEmbedding.copyOf())
+        if (recentEmbeddings.size > EMBEDDING_HISTORY_SIZE) recentEmbeddings.removeFirst()
+        if (recentEmbeddings.size < 3) return true
+
+        val embeddings = recentEmbeddings.toList()
+        for (i in 1 until embeddings.size) {
+            var dot = 0.0
+            for (j in embeddings[i].indices) {
+                dot += embeddings[i][j] * embeddings[i - 1][j]
+            }
+            if (dot < MIN_EMBEDDING_CONSISTENCY) {
+                Timber.tag(TAG).w("Embedding inconsistency: frame ${i - 1}→$i cosine=%.3f", dot)
+                return false
+            }
+        }
+        return true
+    }
+
+    // ── Streamlined Verification Pipeline ────────────────────────────────────────
 
     data class VerificationResult(
         val success: Boolean, val faceMatch: Double, val livenessScore: Float,
@@ -653,18 +326,12 @@ class FaceDetectionHelper(private val context: Context) {
     )
 
     /**
-     * Strict 6-layer verification pipeline. Every frame must pass ALL layers:
-     *
-     * 1. Quality check (face size, landmarks, contours)
-     * 2. Anti-spoofing (3D depth + texture + screen color + motion) — EVERY frame
-     * 3. Identity match against stored embedding (cosine ≥ 0.6)
-     * 4. Embedding consistency (same face across ALL frames — detects face swap)
-     * 5. Pre-liveness identity lock (N frames of identity match BEFORE challenges start)
-     * 6. Active liveness challenges (blink + head turn)
-     * 7. Post-liveness sustained match (N more frames after liveness)
-     * 8. Depth history validation (consistent 3D depth across session)
-     *
-     * If ANY layer fails, progress resets. Face swap = full reset.
+     * Fast 5-step verification:
+     * 1. Quality (face size, landmarks)
+     * 2. Identity match against stored embedding (EVERY frame)
+     * 3. Embedding consistency (detect face swap)
+     * 4. Active liveness (single challenge: blink or head turn)
+     * 5. Post-liveness confirmation (3 consecutive matching frames)
      */
     suspend fun verifyFaceWithLiveness(
         bitmap: Bitmap,
@@ -673,52 +340,17 @@ class FaceDetectionHelper(private val context: Context) {
         enableLiveness: Boolean = true
     ): VerificationResult {
         try {
-            frameCount++
-
             val faces = detectFaces(bitmap)
-            if (faces.isEmpty()) {
-                return fail("No face detected — look at the camera")
-            }
-            if (faces.size > 1) {
-                return fail("Multiple faces — only you should be visible")
-            }
+            if (faces.isEmpty()) return fail("No face detected — look at the camera")
+            if (faces.size > 1) return fail("Multiple faces — only you should be visible")
 
             val face = faces[0]
 
-            // ── Layer 1: Basic quality ──
+            // ── Step 1: Quality ──
             val quality = checkPassiveLiveness(face, bitmap)
-            if (!quality.isLive) {
-                return fail(quality.message)
-            }
+            if (!quality.isLive) return fail(quality.message)
 
-            // ── Layer 2: Anti-spoofing EVERY frame ──
-            val spoofResult = checkAntiSpoofing(bitmap, face)
-            if (!spoofResult.isReal) {
-                spoofDetected = true
-                spoofReason = spoofResult.reason
-                spoofPassStreak = 0
-                Timber.tag(TAG).w("Spoof detected: ${spoofResult.reason} (score=${spoofResult.confidence})")
-            } else {
-                spoofPassStreak++
-                totalSpoofPasses++
-                if (spoofPassStreak >= MIN_SPOOF_PASS_STREAK) {
-                    spoofDetected = false
-                    spoofReason = ""
-                }
-            }
-
-            if (spoofDetected) {
-                postLivenessMatchCount = 0
-                preLivenessIdentityCount = 0
-                return VerificationResult(
-                    success = false, faceMatch = 0.0, livenessScore = 0f,
-                    isLive = false, embedding = null,
-                    message = "Photo/screen detected — use your real face",
-                    framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
-                )
-            }
-
-            // ── Layer 3: Identity match on EVERY frame ──
+            // ── Step 2: Identity match EVERY frame ──
             val embedding = extractFaceEmbedding(face, bitmap)
             val confidence = compareFaces(embedding, storedEmbedding)
 
@@ -729,7 +361,7 @@ class FaceDetectionHelper(private val context: Context) {
                     return VerificationResult(
                         success = false, faceMatch = confidence, livenessScore = 0f,
                         isLive = false, embedding = embedding,
-                        message = "Face doesn't match — start over",
+                        message = "Face doesn't match — try again",
                         framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
                     )
                 }
@@ -738,37 +370,33 @@ class FaceDetectionHelper(private val context: Context) {
                 return VerificationResult(
                     success = false, faceMatch = confidence, livenessScore = 0f,
                     isLive = false, embedding = embedding,
-                    message = "Face match low (${confidence.toInt()}%) — hold steady",
+                    message = "Face match low (${confidence.toInt()}%)",
                     framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
                 )
             }
             identityFailStreak = 0
 
-            // ── Layer 4: Confidence jump detection (face swap) ──
-            val prev = lastMatchConfidence ?: 0.0
-            if (prev > 10.0 && abs(confidence - prev) > MAX_CONFIDENCE_JUMP) {
-                Timber.tag(TAG).w("Confidence jump: $prev -> $confidence — possible swap")
+            // ── Step 3: Confidence jump + embedding consistency ──
+            if (lastMatchConfidence > 10.0 && abs(confidence - lastMatchConfidence) > MAX_CONFIDENCE_JUMP) {
+                Timber.tag(TAG).w("Confidence jump: $lastMatchConfidence -> $confidence")
                 fullReset()
                 return fail("Face changed — start over")
             }
             lastMatchConfidence = confidence
 
-            // ── Layer 5: Embedding consistency (same face across ALL frames) ──
             if (!checkEmbeddingConsistency(embedding)) {
                 fullReset()
-                Timber.tag(TAG).w("Face swap detected via embedding inconsistency")
                 return fail("Face changed — start over")
             }
 
-            // ── Layer 6: Pre-liveness identity lock ──
-            // Must have N consistent identity frames BEFORE liveness challenges begin
+            // ── Step 4: Pre-liveness identity lock ──
             if (enableLiveness && !identityLocked) {
                 preLivenessIdentityCount++
                 if (preLivenessIdentityCount < PRE_LIVENESS_IDENTITY_FRAMES) {
                     return VerificationResult(
                         success = false, faceMatch = confidence, livenessScore = 0f,
                         isLive = false, embedding = embedding,
-                        message = "Verifying identity... hold steady",
+                        message = "Verifying identity...",
                         framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
                     )
                 }
@@ -776,7 +404,7 @@ class FaceDetectionHelper(private val context: Context) {
                 Timber.tag(TAG).d("Identity locked after $preLivenessIdentityCount frames")
             }
 
-            // ── Layer 7: Active liveness challenges ──
+            // ── Step 5: Active liveness ──
             if (enableLiveness) {
                 if (livenessState == null) startLivenessChallenge()
 
@@ -795,33 +423,13 @@ class FaceDetectionHelper(private val context: Context) {
                 }
             }
 
-            // ── Layer 8: Post-liveness strict matching ──
+            // ── Step 6: Post-liveness confirmation ──
             if (confidence < confidenceThreshold) {
                 postLivenessMatchCount = 0
                 return VerificationResult(
                     success = false, faceMatch = confidence, livenessScore = 100f,
                     isLive = true, embedding = embedding,
                     message = "Face match: ${confidence.toInt()}% (need ${confidenceThreshold.toInt()}%)",
-                    framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
-                )
-            }
-
-            // ── Layer 9: Depth history validation ──
-            if (depthPassCount < 3 && frameCount > 6) {
-                return VerificationResult(
-                    success = false, faceMatch = confidence, livenessScore = 100f,
-                    isLive = true, embedding = embedding,
-                    message = "Verifying face depth... hold steady",
-                    framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
-                )
-            }
-
-            // ── Layer 10: Require minimum total anti-spoofing passes ──
-            if (totalSpoofPasses < 4) {
-                return VerificationResult(
-                    success = false, faceMatch = confidence, livenessScore = 100f,
-                    isLive = true, embedding = embedding,
-                    message = "Verifying... hold steady",
                     framesVerified = 0, requiredFrames = REQUIRED_MATCH_FRAMES
                 )
             }
@@ -860,14 +468,6 @@ class FaceDetectionHelper(private val context: Context) {
         postLivenessMatchCount = 0
         lastMatchConfidence = 0.0
         identityFailStreak = 0
-        frameCount = 0
-        spoofDetected = false
-        spoofReason = ""
-        motionHistory.clear()
-        depthHistory.clear()
-        depthPassCount = 0
-        spoofPassStreak = 0
-        totalSpoofPasses = 0
         recentEmbeddings.clear()
         preLivenessIdentityCount = 0
         identityLocked = false
@@ -897,15 +497,14 @@ class FaceDetectionHelper(private val context: Context) {
 
         val elapsed = System.currentTimeMillis() - state.startTime
         if (elapsed > CHALLENGE_TIMEOUT_MS) {
-            val newList = state.challenges.toMutableList()
-            newList[state.currentIndex] = Challenge.entries.toList().random()
+            val newChallenge = Challenge.entries.toList().random()
             livenessState = LivenessState(
-                challenges = newList, currentIndex = state.currentIndex,
+                challenges = listOf(newChallenge), currentIndex = 0,
                 startTime = System.currentTimeMillis()
             )
             return LivenessFrameResult(
                 LivenessStatus.CHALLENGE_TIMEOUT,
-                "Timed out — ${getLivenessInstruction()}", state.progress
+                "Timed out — ${getLivenessInstruction()}", 0f
             )
         }
 
@@ -916,21 +515,8 @@ class FaceDetectionHelper(private val context: Context) {
         }
 
         if (passed) {
-            val nextIdx = state.currentIndex + 1
-            if (nextIdx >= state.challenges.size) {
-                livenessState = state.copy(currentIndex = nextIdx, allPassed = true)
-                return LivenessFrameResult(LivenessStatus.ALL_PASSED, "Liveness verified!", 1f)
-            }
-            livenessState = state.copy(
-                currentIndex = nextIdx, startTime = System.currentTimeMillis(),
-                blinkPhase = BlinkPhase.WAITING_CLOSE, blinkCloseTime = 0L,
-                turnDetected = false
-            )
-            return LivenessFrameResult(
-                LivenessStatus.CHALLENGE_PASSED,
-                "Good! Now: ${getLivenessInstruction()}",
-                nextIdx.toFloat() / state.challenges.size
-            )
+            livenessState = state.copy(currentIndex = state.currentIndex + 1, allPassed = true)
+            return LivenessFrameResult(LivenessStatus.ALL_PASSED, "Liveness verified!", 1f)
         }
 
         return LivenessFrameResult(LivenessStatus.IN_PROGRESS, getLivenessInstruction(), state.progress)
@@ -941,14 +527,10 @@ class FaceDetectionHelper(private val context: Context) {
         val rightEye = face.rightEyeOpenProbability ?: return false
         val avgOpen = (leftEye + rightEye) / 2f
 
-        val eyeDiff = abs(leftEye - rightEye)
-        if (eyeDiff > 0.3f) return false
-
-        val contour = face.getContour(FaceContour.FACE)
-        if (contour == null || contour.points.size < 25) return false
+        if (abs(leftEye - rightEye) > 0.35f) return false
 
         val roll = abs(face.headEulerAngleZ)
-        if (roll > 15f) return false
+        if (roll > 20f) return false
 
         return when (state.blinkPhase) {
             BlinkPhase.WAITING_CLOSE -> {
@@ -964,12 +546,11 @@ class FaceDetectionHelper(private val context: Context) {
             BlinkPhase.WAITING_OPEN -> {
                 val blinkDuration = System.currentTimeMillis() - state.blinkCloseTime
                 if (avgOpen > BLINK_OPEN_THRESHOLD) {
-                    if (blinkDuration in 80..800) {
+                    if (blinkDuration in 60..900) {
                         Timber.tag(TAG).d("Blink detected: ${blinkDuration}ms")
                         livenessState = state.copy(blinkPhase = BlinkPhase.DONE)
                         true
                     } else {
-                        Timber.tag(TAG).w("Blink rejected: ${blinkDuration}ms (unnatural)")
                         livenessState = state.copy(blinkPhase = BlinkPhase.WAITING_CLOSE, blinkCloseTime = 0L)
                         false
                     }
@@ -985,8 +566,7 @@ class FaceDetectionHelper(private val context: Context) {
     private fun processHeadTurn(face: Face, isLeft: Boolean, state: LivenessState): Boolean {
         val yaw = face.headEulerAngleY
         val roll = abs(face.headEulerAngleZ)
-
-        if (roll > 15f) return false
+        if (roll > 20f) return false
 
         val turned = if (isLeft) yaw > HEAD_TURN_THRESHOLD else yaw < -HEAD_TURN_THRESHOLD
 
@@ -1034,7 +614,6 @@ class FaceDetectionHelper(private val context: Context) {
 
     fun close() {
         detector.close()
-        meshDetector.close()
         fullReset()
         try { tfliteInterpreter.close() } catch (_: Exception) {}
     }
