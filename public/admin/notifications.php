@@ -119,7 +119,8 @@ if ($db) {
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="targetUser" class="form-label"><strong>Send To</strong></label>
+                                <label for="userSearch" class="form-label"><strong>Send To</strong></label>
+                                <input type="text" id="userSearch" class="form-control mb-1" placeholder="Search by name..." autocomplete="off" oninput="filterUsers()">
                                 <select id="targetUser" class="form-select" required>
                                     <option value="">-- Select Recipient --</option>
                                     <?php foreach ($users as $user): ?>
@@ -208,6 +209,19 @@ if ($db) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../assets/js/admin.js"></script>
     <script>
+        const allUserOptions = Array.from(document.getElementById('targetUser').options).slice(1);
+
+        function filterUsers() {
+            const query = document.getElementById('userSearch').value.toLowerCase();
+            const select = document.getElementById('targetUser');
+            select.innerHTML = '<option value="">-- Select Recipient --</option>';
+            allUserOptions.forEach(opt => {
+                if (!query || opt.textContent.toLowerCase().includes(query)) {
+                    select.appendChild(opt.cloneNode(true));
+                }
+            });
+        }
+
         function updateMessagePreview() {
             const type = document.getElementById('notificationType').value;
             const messages = {
