@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
     
     $editableKeys = [
         'attendance_multi_check_enabled', 'attendance_default_total_checks',
+        'attendance_min_check_interval', 'attendance_max_check_interval',
         'attendance_check_window_minutes', 'attendance_hide_timing_from_students',
         'face_confidence_threshold', 'liveness_detection_enabled', 'gps_proximity_radius',
     ];
@@ -121,6 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_setting'])) {
 $allowedSettings = [
     'attendance_multi_check_enabled',
     'attendance_default_total_checks',
+    'attendance_min_check_interval',
+    'attendance_max_check_interval',
     'attendance_check_window_minutes',
     'attendance_hide_timing_from_students',
     'face_confidence_threshold',
@@ -132,6 +135,8 @@ $allowedSettings = [
 $settingLabels = [
     'attendance_multi_check_enabled'       => ['label' => 'Multi-Check Attendance',        'desc' => 'Require multiple check-ins during a class for attendance to count'],
     'attendance_default_total_checks'      => ['label' => 'Checks Per Class',              'desc' => 'Number of check-ins required per class session'],
+    'attendance_min_check_interval'        => ['label' => 'Min Interval (minutes)',         'desc' => 'Minimum time between attendance checks'],
+    'attendance_max_check_interval'        => ['label' => 'Max Interval (minutes)',         'desc' => 'Maximum time between attendance checks'],
     'attendance_check_window_minutes'      => ['label' => 'Response Window (min)',          'desc' => 'Minutes a student has to respond to each check'],
     'attendance_hide_timing_from_students' => ['label' => 'Hide Check Timing',             'desc' => 'Students won\'t see when the next check is coming'],
     'face_confidence_threshold'            => ['label' => 'Face Match Threshold (%)',       'desc' => 'Minimum face recognition confidence to accept (0-100)'],
@@ -161,6 +166,8 @@ if ($db) {
         $defaults = [
             'attendance_multi_check_enabled'       => ['value' => 'true',  'type' => 'boolean'],
             'attendance_default_total_checks'      => ['value' => '2',     'type' => 'integer'],
+            'attendance_min_check_interval'        => ['value' => '10',    'type' => 'integer'],
+            'attendance_max_check_interval'        => ['value' => '25',    'type' => 'integer'],
             'attendance_check_window_minutes'      => ['value' => '3',     'type' => 'integer'],
             'attendance_hide_timing_from_students'  => ['value' => 'true', 'type' => 'boolean'],
             'face_confidence_threshold'            => ['value' => '60',    'type' => 'integer'],
@@ -202,6 +209,8 @@ function getSettingIcon($key) {
     $icons = [
         'attendance_multi_check_enabled'       => 'check2-all',
         'attendance_default_total_checks'      => 'hash',
+        'attendance_min_check_interval'        => 'hourglass-bottom',
+        'attendance_max_check_interval'        => 'hourglass-top',
         'attendance_check_window_minutes'      => 'clock',
         'attendance_hide_timing_from_students' => 'eye-slash',
         'face_confidence_threshold'            => 'percent',
