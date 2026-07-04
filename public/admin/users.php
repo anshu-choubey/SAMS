@@ -746,6 +746,7 @@ $pageTitle = 'Users';
 
         function applyFilters() {
             const department = document.getElementById('filterDepartment').value;
+            const role = document.getElementById('filterRole').value;
             const status = document.getElementById('filterStatus').value;
             const search = document.getElementById('searchUser').value.toLowerCase();
 
@@ -754,25 +755,30 @@ $pageTitle = 'Users';
 
                 // Filter by department
                 if (department && show) {
-                    const deptCell = row.cells[3];
-                    const deptText = deptCell.textContent.trim();
+                    const deptText = row.cells[3].textContent.trim();
                     const selectedDeptName = document.querySelector(`#filterDepartment option[value="${department}"]`)?.textContent;
                     if (deptText !== selectedDeptName) show = false;
                 }
 
+                // Filter by role
+                if (role && show) {
+                    const roleText = row.cells[2].textContent.trim().toLowerCase();
+                    if (roleText !== role) show = false;
+                }
+
                 // Filter by status
                 if (status !== '' && show) {
-                    const statusCell = row.cells[5];
-                    const isActive = statusCell.textContent.includes('Active') && !statusCell.textContent.includes('Inactive');
+                    const statusText = row.cells[5].textContent.trim();
+                    const isActive = statusText.includes('Active') && !statusText.includes('Inactive');
                     if (status === '1' && !isActive) show = false;
                     if (status === '0' && isActive) show = false;
                 }
 
                 // Filter by search
                 if (search && show) {
-                    const nameCell = row.cells[0].textContent.toLowerCase();
-                    const emailCell = row.cells[1].textContent.toLowerCase();
-                    if (!nameCell.includes(search) && !emailCell.includes(search)) show = false;
+                    const name = row.cells[0].textContent.toLowerCase();
+                    const email = row.cells[1].textContent.toLowerCase();
+                    if (!name.includes(search) && !email.includes(search)) show = false;
                 }
 
                 return show;
@@ -785,6 +791,7 @@ $pageTitle = 'Users';
         // Reset filters
         function resetFilters() {
             document.getElementById('filterDepartment').value = '';
+            document.getElementById('filterRole').value = '';
             document.getElementById('filterStatus').value = '';
             document.getElementById('searchUser').value = '';
             
